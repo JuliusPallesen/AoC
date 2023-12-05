@@ -1,9 +1,9 @@
-#include <algorithm>    // For sort  
-#include <climits>      // For LLMAX
-#include <fstream>      // For file parsing
-#include <iostream>     // For printing
-#include <sstream>      // For string parsing
-#include <vector>       
+#include <algorithm> // For sort
+#include <climits> // For LLMAX
+#include <fstream> // For file parsing
+#include <iostream> // For printing
+#include <sstream> // For string parsing
+#include <vector>
 
 struct mapping {
     uint64_t source_start;
@@ -16,7 +16,7 @@ bool ranges_overlap(uint64_t s1, uint64_t e1, uint64_t s2, uint64_t e2)
     return (s1 <= e2 && e1 >= s2) || (e1 >= s2 && s1 <= e2);
 }
 
-uint64_t findMinFromRangeTree(const uint64_t start, const uint64_t end, const int map_index, std::vector<std::vector<mapping>>& maps)
+uint64_t findMinFromRangeTree(const uint64_t start, const uint64_t end, const uint8_t map_index, std::vector<std::vector<mapping>>& maps)
 {
     uint64_t min = LLONG_MAX;
     uint64_t i = start;
@@ -53,15 +53,17 @@ uint64_t findMinFromRangeTree(const uint64_t start, const uint64_t end, const in
 
 int main(int argc, char const* argv[])
 {
-    std::ifstream inputFile;
-    inputFile.open(argv[1]);
     std::string line;
     std::string str;
-    std::getline(inputFile, line);
-    std::vector<uint64_t> seeds;
-    std::stringstream ss(line);
     std::vector<std::vector<mapping>> maps;
+    std::vector<uint64_t> seeds;
     uint8_t map_index = -1;
+
+    std::ifstream inputFile;
+    inputFile.open(argv[1]);
+
+    std::getline(inputFile, line);
+    std::stringstream ss(line);
 
     ss >> str;
     while (ss >> str) {
