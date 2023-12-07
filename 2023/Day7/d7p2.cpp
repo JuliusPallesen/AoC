@@ -6,7 +6,7 @@
 #include <unordered_map>
 #include <vector>
 
-static std::vector<char> cardValues({ 'A', 'K', 'Q', 'T', '9', '8', '7', '6', '5', '4', '3', '2', 'J'});
+static std::vector<char> cardValues({ 'A', 'K', 'Q', 'T', '9', '8', '7', '6', '5', '4', '3', '2', 'J' });
 
 struct CardCount {
     char amount;
@@ -26,29 +26,26 @@ bool cmpCardGreater(const char c1, const char c2)
     return rank1 < rank2;
 }
 
-std::vector<CardCount> getHand(std::string hand)
+std::vector<CardCount> getHand(const std::string& hand)
 {
     std::vector<CardCount> ret;
     std::unordered_map<char, char> map;
-    for (char& c : hand) {
-        if (map.count(c) > 0) {
-            map[c] = map[c] + 1;
-        } else {
-            map[c] = 1;
-        }
+    for (char c : hand) {
+        map[c]++;
     }
     for (auto& p : map) {
-        if(p.first != 'J') ret.push_back({ p.second, p.first });
+        if (p.first != 'J') {
+            ret.push_back({ p.second, p.first });
+        }
     }
-    std::sort(ret.begin(), ret.end(), [](auto& p1, auto& p2) {
-        return p1.amount > p2.amount;
-    });
-    if(ret.empty()) {
-        ret.push_back({0,'A'});
+    std::sort(ret.begin(), ret.end(), [](const auto& p1, const auto& p2) { return p1.amount > p2.amount; });
+
+    if (ret.empty()) {
+        ret.push_back({ 0, 'J' });
     }
 
     ret[0].amount += map['J'];
-    
+
     return ret;
 }
 
@@ -78,14 +75,17 @@ int main(int argc, char const* argv[])
             }
         }
         int i = 0;
-        while(h1.str[i] == h2.str[i] && i < 5) {++i;}
+        while (h1.str[i] == h2.str[i] && i < 5) {
+            ++i;
+        }
+
         return !cmpCardGreater(h1.str[i], h2.str[i]);
     };
 
     std::sort(hands.begin(), hands.end(), handCmpr);
-
+    
     for (size_t i = 0; i < hands.size(); i++) {
-        ans += (i + 1) * (uint64_t)hands[i].bid;
+        ans += (i + 1) * hands[i].bid;
     }
 
     inputFile.close();

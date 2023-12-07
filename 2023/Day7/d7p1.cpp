@@ -21,28 +21,22 @@ struct CamelHand {
 
 bool cmpCardGreater(const char c1, const char c2)
 {
-    auto rank1 = std::find(cardValues.begin(), cardValues.end(), c1);
-    auto rank2 = std::find(cardValues.begin(), cardValues.end(), c2);
-    return rank1 < rank2;
+    return std::find(cardValues.begin(), cardValues.end(), c1) < std::find(cardValues.begin(), cardValues.end(), c2);
 }
 
-std::vector<CardCount> getHand(std::string hand)
+std::vector<CardCount> getHand(const std::string& hand)
 {
     std::vector<CardCount> ret;
     std::unordered_map<char, char> map;
-    for (char& c : hand) {
-        if (map.count(c) > 0) {
-            map[c] = map[c] + 1;
-        } else {
-            map[c] = 1;
-        }
+    for (char c : hand) {
+        map[c]++;
     }
+
     for (auto& p : map) {
         ret.push_back({ p.second, p.first });
     }
-    std::sort(ret.begin(), ret.end(), [](auto& p1, auto& p2) {
-        return p1.amount > p2.amount;
-    });
+
+    std::sort(ret.begin(), ret.end(), [](const auto& p1, const auto& p2) { return p1.amount > p2.amount; });
     return ret;
 }
 
@@ -71,8 +65,11 @@ int main(int argc, char const* argv[])
                 return false;
             }
         }
+    
         int i = 0;
-        while(h1.str[i] == h2.str[i] && i < 5) {++i;}
+        while (h1.str[i] == h2.str[i] && i < 5) {
+            ++i;
+        }
         return !cmpCardGreater(h1.str[i], h2.str[i]);
     };
 
