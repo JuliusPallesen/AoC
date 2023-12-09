@@ -25,6 +25,6 @@ int main(int argc, char const* argv[])
     distance = stoll(line);
  
     inputFile.close();
-    std::cout << (uint64_t)((time + sqrt(time * time - 4* distance)) / 2) - (uint64_t)((time - sqrt(time * time - 4* distance)) / 2);
+    std::cout << (uint64_t)(time + sqrt(time * time - 4* distance) / 2) - (uint64_t)(time - sqrt(time * time - 4* distance) / 2);
     return 0;
 }
