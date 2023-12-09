@@ -7,20 +7,20 @@
 
 std::vector<long> scuffedDerive(const std::vector<long>& sensor)
 {
-    std::vector<long> derive;
+    std::vector<long> derived;
     for (size_t i = 1; i < sensor.size(); i++) {
-        derive.push_back(sensor[i] - sensor[i - 1]);
+        derived.push_back(sensor[i] - sensor[i - 1]);
     }
-    return derive;
+    return derived;
 }
 
 long getNextValue(const std::vector<long>& sensor)
 {
-    std::vector<long> derive = scuffedDerive(sensor);
-    if (derive.size() == 0 || std::count_if(derive.begin(), derive.end(), [](const long r) { return r == 0; }) == derive.size()) {
+    std::vector<long> derived = scuffedDerive(sensor);
+    if (derived.size() == 0 || std::count_if(derived.begin(), derived.end(), [](const long r) { return r == 0; }) == static_cast<int>(derived.size())) {
         return 0;
     } else {
-        return derive[derive.size() - 1] + getNextValue(derive);
+        return derived[derived.size() - 1] + getNextValue(derived);
     }
 }
 
@@ -33,11 +33,8 @@ int main(int argc, char const* argv[])
     std::vector<std::vector<long>> sensorReadings;
     while (std::getline(inputFile, line)) {
         std::istringstream iss(line);
-        sensorReadings.push_back(std::vector<long>(std::istream_iterator<long>(iss), std::istream_iterator<long>()));
-    }
-
-    for (const auto& sensor : sensorReadings) {
-        ans += getNextValue(sensor) + sensor[sensor.size() -1];
+        std::vector<long> sensor = std::vector<long>(std::istream_iterator<long>(iss), std::istream_iterator<long>());
+        ans += getNextValue(sensor) + sensor[sensor.size() - 1];
     }
 
     inputFile.close();
