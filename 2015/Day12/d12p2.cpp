@@ -7,19 +7,28 @@
 
 using json = nlohmann::json;
 
-int sumIntegers(const json& j)
+int sumIntegersWithoutRed(const json& j)
 {
     int sum = 0;
 
     if (j.is_object()) {
+        bool red = false;
         for (auto& entry : j.items()) {
-            sum += sumIntegers(entry.value());
+            if (entry.value() == "red") {
+                red = true;
+                break;
+            }
+        }
+        if (!red) {
+            for (auto& entry : j.items()) {
+                sum += sumIntegersWithoutRed(entry.value());
+            }
         }
     } else if (j.is_number()) {
         sum += j.get<int>();
     } else if (j.is_array()) {
         for (auto& element : j) {
-            sum += sumIntegers(element);
+            sum += sumIntegersWithoutRed(element);
         }
     }
 
@@ -32,6 +41,6 @@ int main(int argc, char const* argv[])
     std::ifstream inputFile(argv[1]);
     json data = json::parse(inputFile);
 
-    std::cout << sumIntegers(data);
+    std::cout << sumIntegersWithoutRed(data);
     return 0;
 }
