@@ -41,6 +41,7 @@ int main(int argc, char const* argv[])
     for (auto& p : people) {
         table.push_back(p.second);
     }
+    table.push_back({"me", std::vector<std::pair<std::string,int>>()});
 
     int max_happy = 0;
     while (std::next_permutation(table.begin(), table.end(), [](const auto & p1, const auto & p2){return p1.name < p2.name;})) {
