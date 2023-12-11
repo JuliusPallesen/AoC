@@ -5,6 +5,7 @@
 #include <unordered_map>
 #include <vector>
 
+// needed to use positions in the hash map
 struct pair_hash {
     template <class T1, class T2>
     std::size_t operator()(const std::pair<T1, T2>& p) const
@@ -23,13 +24,7 @@ struct pipe {
     int distance;
 };
 
-void printChars(std::vector<std::string> chars)
-{
-    for (const std::string& s : chars) {
-        std::cout << s << "\n";
-    }
-}
-
+// returns a vector of the positions of all possible neighbouts (connecting or not) for a given piipe piece
 std::vector<std::pair<int, int>> getNeighbours(std::pair<int, int> pos, char type)
 {
     std::vector<std::pair<int, int>> n;
@@ -70,25 +65,32 @@ std::vector<std::pair<int, int>> getNeighbours(std::pair<int, int> pos, char typ
     return n;
 };
 
+// recursively visits all pipes that are part of the loop. Does some initialization work, like removing 
+// non-connecting pipes from the neighbours vector and marks pipes as being "part of the loop"
 void visitPipes(std::unordered_map<std::pair<int, int>, pipe, pair_hash>& pipes, std::pair<int, int> pos, int dist = 0)
 {
     if (pipes.count(pos) > 0) {
-        pipes[pos].distance = dist;
         pipes[pos].part_of_loop = true;
-        for (auto& n : pipes[pos].neighbours) {
+        pipes[pos].distance = dist;
+        for (auto it = pipes[pos].neighbours.begin(); it != pipes[pos].neighbours.end();) {
+            const auto& n = *it;
             if (pipes.count(n) > 0) {
                 if (std::find(pipes[n].neighbours.begin(), pipes[n].neighbours.end(), pos) != pipes[n].neighbours.end()) {
                     if (pipes[n].distance > dist + 1) {
                         visitPipes(pipes, n, dist + 1);
                     }
+                    ++it;
                 } else {
-                    // in theory you could remove the neighbor here
+                    it = pipes[pos].neighbours.erase(it);
                 }
+            } else {
+                it = pipes[pos].neighbours.erase(it);
             }
         }
     }
 }
 
+// given a Position in the 2D input char vector this floodfills all neighbouring positions recursively
 int floodfill(std::vector<std::string>& chars, std::unordered_map<std::pair<int, int>, pipe, pair_hash>& pipes, std::pair<int, int> pos, char fill = ' ')
 {
     if (pos.first < 0 || pos.second < 0 || pos.first >= chars.size() || pos.second >= chars[pos.first].size()) {
@@ -105,10 +107,63 @@ int floodfill(std::vector<std::string>& chars, std::unordered_map<std::pair<int,
     }
 }
 
+// Safe vector access. Could probably be removed by now, but i'm scared :<
 void safeCharChange(std::vector<std::string>& chars, const int y, const int x, const char c)
 {
-    if (x >= 0 && y >= 0 && y < chars.size() - 1  && x < chars[y].size() - 1) {
+    if (x >= 0 && y >= 0 && y < chars.size() - 1 && x < chars[y].size() - 1) {
         chars[y][x] = c;
+    }
+}
+
+// Scales up the input 2D char array by 2 and fills empty spaces with .'s
+std::vector<std::string> getDoubleSize(const std::vector<std::string>& chars)
+{
+    std::vector<std::string> doubledChars(chars.size() * 2);
+    for (int y = 0; y < chars.size(); ++y) {
+        doubledChars[y * 2] = std::string(chars[y].size() * 2, '.');
+        for (size_t x = 0; x < chars[y].size(); x++) {
+            doubledChars[y * 2][x * 2] = chars[y][x];
+        }
+        doubledChars[y * 2 + 1] = std::string(chars[0].size() * 2, '.');
+    }
+    return doubledChars;
+}
+
+// Parses a string vector into a map of pipes and retrieves the starting position
+void parseLine(std::unordered_map<std::pair<int, int>, pipe, pair_hash>& pipes, const std::string& line, std::pair<int, int>* start, int y)
+{
+    for (int x = 0; x < line.size(); ++x) {
+        if (line[x] != '.') {
+            pipe p;
+            p.distance = INT32_MAX;
+            p.position = { y, x };
+            p.type = line[x];
+            if (line[x] == 'S') {
+                *start = { y, x };
+                p.distance = 0;
+            }
+            p.neighbours = getNeighbours(p.position, p.type);
+            pipes[p.position] = p;
+        }
+    }
+}
+
+// Fills gaps created by the upscaling. Only straight pipe pieces are needed
+// the x and y offsets between all neighbours (we know about neighbours from the previous initialization (part 1))
+// tell us wether to fill the gap with a horizontal or vertical pipe.
+void fillCharGaps(const std::unordered_map<std::pair<int, int>, pipe, pair_hash>& pipes, std::vector<std::string>& chars)
+{
+    for (auto& p : pipes) {
+        for (auto& n : p.second.neighbours) {
+            int y_offset = n.first - p.first.first;
+            int x_offset = n.second - p.first.second;
+            if (y_offset == 0) {
+                safeCharChange(chars, 2 * p.first.first, 2 * p.first.second + x_offset, '-');
+            }
+            if (x_offset == 0) {
+                safeCharChange(chars, 2 * p.first.first + y_offset, 2 * p.first.second, '|');
+            }
+        }
     }
 }
 
@@ -124,101 +179,32 @@ int main(int argc, char const* argv[])
     int y = 0;
     while (std::getline(inputFile, line)) {
         chars.push_back(line);
-        for (int x = 0; x < line.size(); ++x) {
-            if (line[x] != '.') {
-                pipe p;
-                p.distance = INT32_MAX;
-                p.position = { y, x };
-                p.type = line[x];
-                if (line[x] == 'S') {
-                    start = { y, x };
-                    p.distance = 0;
-                }
-                p.part_of_loop = false;
-                p.neighbours = getNeighbours(p.position, p.type);
-                pipes[p.position] = p;
-            }
-        }
+        parseLine(pipes, line, &start, y); // fills pipes map and finds the start
         y++;
     }
-
     visitPipes(pipes, start);
 
-    std::vector<std::string> doubledChars(chars.size() * 2);
-    for (int y = 0; y < chars.size(); ++y) {
-        doubledChars[y * 2] = std::string(chars[y].size() * 2, '.');
-        for (size_t x = 0; x < chars[y].size(); x++) {
-            doubledChars[y * 2][x * 2] = chars[y][x];
-        }
-        doubledChars[y * 2 + 1] = std::string(chars[0].size() * 2, '.');
-    }
-    for (const auto& e : pipes) {
-        int y = 2 * e.second.position.first;
-        int x = 2 * e.second.position.second;
-        switch (e.second.type) {
-        case '|':
-            safeCharChange(doubledChars, y - 1, x, '|');
-            safeCharChange(doubledChars, y + 1, x, '|');
-            break;
-        case 'J':
-            safeCharChange(doubledChars, y - 1, x, '|');
-            safeCharChange(doubledChars, y, x - 1, '-');
-            break;
-        case 'F':
-            safeCharChange(doubledChars, y + 1, x, '|');
-            safeCharChange(doubledChars, y, x + 1, '-');
-            break;
-        case 'L':
-            safeCharChange(doubledChars, y - 1, x, '|');
-            safeCharChange(doubledChars, y, x + 1, '-');
-            break;
-        case '7':
-            safeCharChange(doubledChars, y + 1, x, '|');
-            safeCharChange(doubledChars, y, x - 1, '-');
-            break;
-        case '-':
-            safeCharChange(doubledChars, y, x + 1, '-');
-            safeCharChange(doubledChars, y, x - 1, '-');
-            break;
-        case 'S':
-            safeCharChange(doubledChars, y, x + 1, '-');
-            safeCharChange(doubledChars, y, x - 1, '-');
-            safeCharChange(doubledChars, y + 1, x, '|');
-            safeCharChange(doubledChars, y - 1, x, '|');
-            break;
-        default:
-            break;
-        }
-    }
+    // create a scaled up version of the input and fill the empty spaces with .'s 
+    std::vector<std::string> doubledChars = getDoubleSize(chars);
 
-    
+    // fill up the gaps created inside of our loop by scaling them up
+    fillCharGaps(pipes, doubledChars);
+
+    // initialize "greater" loop
     std::unordered_map<std::pair<int, int>, pipe, pair_hash> doublepipes;
     for (int y = 0; y < doubledChars.size(); ++y) {
-        for (int x = 0; x < doubledChars[y].size(); ++x) {
-            if (doubledChars[y][x] != '.') {
-                pipe p;
-                p.distance = INT32_MAX;
-                p.position = { y, x };
-                p.type = doubledChars[y][x];
-                if (doubledChars[y][x] == 'S') {
-                    start = { y, x };
-                    p.distance = 0;
-                }
-                p.neighbours = getNeighbours(p.position, p.type);
-                doublepipes[p.position] = p;
-            }
-        }
+        parseLine(doublepipes, doubledChars[y], &start, y);
     }
-
     visitPipes(doublepipes, start);
-    
+
+    //Brute force all 9 neighbours and choose the most logical looking answer......
     for (int i = -1; i <= 1; i++) {
         for (int j = -1; j <= 1; j++) {
             std::vector<std::string> dc(doubledChars);
             floodfill(dc, doublepipes, { start.first + i, start.second + j }, 'I');
-
             for (int y = 0; y < dc.size(); ++y) {
                 for (int x = 0; x < dc[y].size(); ++x) {
+                    // because we doubled our chars size we only consider I's on even indices
                     if (x % 2 == 0 && y % 2 == 0 && dc[y][x] == 'I') {
                         ans++;
                     }
