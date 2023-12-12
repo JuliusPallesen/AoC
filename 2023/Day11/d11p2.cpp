@@ -18,7 +18,7 @@ int main(int argc, char const* argv[])
     inputFile.open(argv[1]);
     std::string line;
     std::vector<std::string> input;
-    int ans = 0;
+    uint64_t ans = 0;
     std::vector<bool> empty_y(256, true);
     std::vector<bool> empty_x(256, true);
     std::vector<std::pair<int, int>> galaxies;
@@ -45,8 +45,8 @@ int main(int argc, char const* argv[])
             int max_x = std::max(galaxies[i].second, galaxies[j].second);
             int min_x = std::min(galaxies[i].second, galaxies[j].second);
             ans += (max_x - min_x) + (max_y - min_y);
-            ans += std::count_if(empty_x.begin() + min_x, empty_x.begin() + max_x, [](bool b){return b;});
-            ans += std::count_if(empty_y.begin() + min_y, empty_y.begin() + max_y, [](bool b){return b;});
+            ans += 999999 * std::count_if(empty_x.begin() + min_x, empty_x.begin() + max_x, [](bool b){return b;});
+            ans += 999999 * std::count_if(empty_y.begin() + min_y, empty_y.begin() + max_y, [](bool b){return b;});
         }
     }
 
