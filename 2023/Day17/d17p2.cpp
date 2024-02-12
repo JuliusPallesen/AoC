@@ -222,13 +222,12 @@ class HashDijkstra
 public:
     size_t operator()(const DijkstraState &step) const
     {
-        return (step.x << (8 + 3 + 4)) | (step.y << (3 + 4)) | (static_cast<int>(step.last_direction) << 4) | step.straight_steps;
+        return (step.x << 16) | (step.y << 8) | (static_cast<int>(step.last_direction) << 4) | step.straight_steps;
     }
 };
 
-
 /*
-Performs Dijkstras algorithm (with restrictions) on the input. 
+Performs Dijkstras algorithm (with restrictions) on the input.
 priority queue is used to keep track of which configurations / states should be expanded next.
 */
 unsigned int getMinimalHeatloss(const std::vector<std::vector<int>> &map)

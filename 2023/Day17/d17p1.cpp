@@ -135,7 +135,7 @@ std::optional<DijkstraState> getNewStateInTravelDir(const DijkstraState &previou
 
     if (checkInBounds2D(new_state.x, new_state.y, map) &&
         notReversing(previous.last_direction, direction) &&
-        new_state.straight_steps < 4)
+        new_state.straight_steps <= 3)
     {
         new_state.path_length = previous.path_length + map[new_state.y][new_state.x];
         return new_state;
@@ -209,7 +209,7 @@ class HashDijkstra
 public:
     size_t operator()(const DijkstraState &step) const
     {
-        return (step.x << (8 + 3 + 4)) | (step.y << (3 + 4)) | (static_cast<int>(step.last_direction) << 4) | step.straight_steps;
+        return (step.x << 16) | (step.y << 8) | (static_cast<int>(step.last_direction) << 4) | step.straight_steps;
     }
 };
 
