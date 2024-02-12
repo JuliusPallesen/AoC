@@ -29,14 +29,14 @@ int main(int argc, char const* argv[])
             while (possible && std::getline(rs, color, ',')) {
                 color.erase(color.begin());
                 int amount = stoi(color.substr(0, color.find(' ')));
-                color = color.substr(color.find(' '), color.size() - color.find(' '));
+                color = color.substr(color.find(' ') + 1, color.size() - color.find(' ') + 1);
                 int max_amount = 0;
 
-                if (color == " red")
+                if (color == "red")
                     max_amount = red;
-                if (color == " blue")
+                if (color == "blue")
                     max_amount = blue;
-                if (color == " green")
+                if (color == "green")
                     max_amount = green;
 
                 if (amount > max_amount)

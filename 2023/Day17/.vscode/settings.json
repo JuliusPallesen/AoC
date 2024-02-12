@@ -15,6 +15,7 @@
         "cstring": "cpp",
         "ctime": "cpp",
         "cwchar": "cpp",
+        "deque": "cpp",
         "exception": "cpp",
         "fstream": "cpp",
         "initializer_list": "cpp",
@@ -24,9 +25,11 @@
         "istream": "cpp",
         "iterator": "cpp",
         "limits": "cpp",
+        "list": "cpp",
         "memory": "cpp",
         "new": "cpp",
         "ostream": "cpp",
+        "queue": "cpp",
         "sstream": "cpp",
         "stdexcept": "cpp",
         "streambuf": "cpp",
@@ -35,9 +38,11 @@
         "tuple": "cpp",
         "type_traits": "cpp",
         "typeinfo": "cpp",
+        "unordered_map": "cpp",
         "utility": "cpp",
         "vector": "cpp",
         "xfacet": "cpp",
+        "xhash": "cpp",
         "xiosbase": "cpp",
         "xlocale": "cpp",
         "xlocinfo": "cpp",
@@ -47,7 +52,6 @@
         "xstring": "cpp",
         "xtr1common": "cpp",
         "xutility": "cpp",
-        "array": "cpp"
-    },
-    "cmake.configureOnOpen": true
+        "optional": "cpp"
+    }
 }
