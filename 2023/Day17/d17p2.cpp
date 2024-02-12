@@ -226,11 +226,19 @@ public:
     }
 };
 
+
+/*
+Performs Dijkstras algorithm (with restrictions) on the input. 
+priority queue is used to keep track of which configurations / states should be expanded next.
+*/
 unsigned int getMinimalHeatloss(const std::vector<std::vector<int>> &map)
 {
+    // Keeps track of visited "Configurations". Because of the limitations of either having to turn after a certain number of steps
+    // or not being able to turn for a certain amount of steps, it's possible that the shortest path to a tile in the map isn't
+    // necesserily the best one, if it means that you're not able to use the shortest path to the next tile due to the direction you arrived from
     std::unordered_set<DijkstraState, HashDijkstra> visited;
+
     std::priority_queue<DijkstraState, std::vector<DijkstraState>> dijkstraQueue = initPrioQueue();
-    const Directions directions[] = {Up, Right, Down, Left};
 
     while (!dijkstraQueue.empty())
     {
@@ -244,7 +252,7 @@ unsigned int getMinimalHeatloss(const std::vector<std::vector<int>> &map)
         if (visited.find(current) == visited.end())
         {
             visited.insert(current);
-            for (const auto &dir : directions)
+            for (const auto &dir : {Up, Right, Down, Left})
             {
                 auto new_state = getNewStateInTravelDir(current, dir, map);
                 if (new_state)
@@ -262,6 +270,6 @@ int main(int argc, char const *argv[])
     std::vector<std::vector<int>> map;
     map = retrievePuzzleInput(argv[1]);
 
-    std::cout << getMinimalHeatloss(map);
+    std::cout << getMinimalHeatloss(map) << std::endl;
     return 0;
 }

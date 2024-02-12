@@ -8,9 +8,9 @@ int main(int argc, char const* argv[])
 {
     std::ifstream inputFile;
     std::string line;
-    uint64_t ans = 0;
-    uint64_t time;
-    uint64_t distance;
+    unsigned long ans = 0;
+    unsigned long time;
+    unsigned long distance;
 
     inputFile.open(argv[1]);
 
@@ -25,6 +25,6 @@ int main(int argc, char const* argv[])
     distance = stoll(line);
  
     inputFile.close();
-    std::cout << (uint64_t)(time + sqrt(time * time - 4* distance) / 2) - (uint64_t)(time - sqrt(time * time - 4* distance) / 2);
+    std::cout << (unsigned long)(time + sqrt(time * time - 4* distance) / 2) - (unsigned long)(time - sqrt(time * time - 4* distance) / 2);
     return 0;
 }
