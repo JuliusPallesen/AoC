@@ -13,7 +13,7 @@ Refector ideas
 swap hashset for normal set? -> could lead to issues with sorting? if set uses binary search and i have lots of similar valies
 scoped enum?
 */
-enum Directions
+enum class Directions
 {
     Up = 0,
     Right = 1,
@@ -25,12 +25,13 @@ enum Directions
 class Timer
 {
 public:
-    Timer() : start(std::chrono::high_resolution_clock::now())
+
+    Timer() : start(std::chrono::steady_clock::now())
     {
     }
     ~Timer()
     {
-        std::cout << "time elapsed: " << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - start).count()
+        std::cout << "time elapsed: " << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start).count()
                   << "ms" << std::endl;
     }
 
@@ -51,13 +52,13 @@ private:
         unsigned int y;
         unsigned int path_length;
         unsigned int straight_steps;
-        Directions last_direction;
+        Directions direction;
 
-        DijkstraState() : last_direction(None), x(0), y(0), path_length(0), straight_steps(0)
+        DijkstraState() : x(0), y(0), path_length(0), straight_steps(0), direction(Directions::None)
         {
         }
 
-        DijkstraState(const DijkstraState &previous, const Directions dir) : last_direction(dir), x(previous.x), y(previous.y)
+        DijkstraState(const DijkstraState &previous, const Directions dir) : x(previous.x), y(previous.y), direction(dir)
         {
             takeStep();
             calcStraightSteps(previous);
@@ -73,18 +74,15 @@ private:
         {
             return x == other.x &&
                    y == other.y &&
-                   last_direction == other.last_direction &&
+                   direction == other.direction &&
                    straight_steps == other.straight_steps;
         }
 
         bool operator>(DijkstraState const &other) const
         {
-            return this->path_length < other.path_length;
-        }
-
-        bool operator<(DijkstraState const &other) const
-        {
-            return this->path_length > other.path_length;
+            const int v1 = path_length - x - y;
+            const int v2 = other.path_length - other.x - other.y;
+            return v1 > v2;
         }
 
         void printState()
@@ -99,18 +97,18 @@ private:
     private:
         char getDirectionChar()
         {
-            switch (last_direction)
+            switch (direction)
             {
-            case Up:
+            case Directions::Up:
                 return '^';
                 break;
-            case Right:
+            case Directions::Right:
                 return '>';
                 break;
-            case Down:
+            case Directions::Down:
                 return 'v';
                 break;
-            case Left:
+            case Directions::Left:
                 return '<';
                 break;
             default:
@@ -121,19 +119,19 @@ private:
 
         void takeStep()
         {
-            switch (last_direction)
+            switch (direction)
             {
-            case Up:
-                y--;
+            case Directions::Up:
+                y == 0 ? 0 : --y;
                 break;
-            case Left:
-                x--;
+            case Directions::Left:
+                x == 0 ? 0 : --x;
                 break;
-            case Down:
-                y++;
+            case Directions::Down:
+                ++y;
                 break;
-            case Right:
-                x++;
+            case Directions::Right:
+                ++x;
                 break;
             default:
                 break;
@@ -142,7 +140,7 @@ private:
 
         void calcStraightSteps(const DijkstraState &previous)
         {
-            if (previous.last_direction == last_direction)
+            if (previous.direction == direction)
             {
                 straight_steps = previous.straight_steps + 1;
             }
@@ -153,35 +151,53 @@ private:
         }
     };
 
+    /*
+    Hashes a DijkstraStep.
+    */
     class HashDijkstraState
     {
     public:
         size_t operator()(const DijkstraState &step) const
         {
-            return (step.x << 16) | (step.y << 8) | (static_cast<int>(step.last_direction) << 4) | step.straight_steps;
+            return std::hash<unsigned int>()(step.x) ^
+                   std::hash<unsigned int>()(step.y) ^
+                   std::hash<Directions>()(step.direction) ^
+                   std::hash<unsigned int>()(step.straight_steps);
         }
     };
 
-    std::optional<DijkstraState> getNewStateInTravelDir(const DijkstraState &previous, Directions direction, const std::vector<std::vector<unsigned int>> &map)
+    /*
+    Tries to create a new DijkstraStep based on the previous DijkstraStep and a Direction.
+    Only returns a DijkstraStep if the step is valid and all conditions are met.
+    */
+    std::optional<DijkstraState> getNewStateInTravelDir(const DijkstraState &previous, const Directions direction, const std::vector<std::vector<unsigned int>> &map)
     {
-        DijkstraState new_state(previous, direction);
+        DijkstraState current(previous, direction);
 
-        if (checkInBounds2D(new_state.x, new_state.y, map) &&
-            notReversing(previous.last_direction, direction) &&
-            isValidMove(previous, new_state))
+        if (checkInBounds2D(current.x, current.y, map) &&
+            notReversing(previous.direction, current.direction) &&
+            isValidMove(previous, current))
         {
-            new_state.path_length = previous.path_length + map[new_state.y][new_state.x];
-            return new_state;
+            current.path_length = previous.path_length + map[current.y][current.x];
+            return current;
         }
         return {};
     }
 
-    std::vector<std::vector<unsigned int>> retrievePuzzleInput(std::string inputfilepath)
+    /*
+    Retrieves the puzzleinput from a file and converts it to a suitable format
+    */
+    std::vector<std::vector<unsigned int>> retrievePuzzleInput(const std::string &inputfilepath)
     {
         std::vector<std::vector<unsigned int>> ret;
         std::ifstream inputFile;
         std::string line;
         inputFile.open(inputfilepath);
+
+        if (!inputFile.is_open())
+        {
+            throw std::runtime_error("Couldn't open file.");
+        }
 
         while (std::getline(inputFile, line))
         {
@@ -197,9 +213,9 @@ private:
     /*
     Checks if a Position is inside of a 2D vector
     */
-    inline bool checkInBounds2D(int x, int y, const std::vector<std::vector<unsigned int>> &vec)
+    inline bool checkInBounds2D(unsigned int x, unsigned int y, const std::vector<std::vector<unsigned int>> &vec)
     {
-        return x >= 0 && y >= 0 && x < vec[0].size() && y < vec.size();
+        return x < vec[0].size() && y < vec.size();
     }
 
     /*
@@ -210,9 +226,14 @@ private:
         return !(static_cast<int>(dir1) == ((static_cast<int>(dir2) + 2) % 4));
     }
 
+    /*
+    Checks if a move from previous to current is a Valid move.
+    A valid move is one that only changes directions after the minimum straight_steps taken
+    and changes directions before the maximum straight_steps taken are exceeded.
+    */
     bool isValidMove(const DijkstraState &previous, const DijkstraState &current) const
     {
-        if (previous.last_direction == None || previous.last_direction == current.last_direction)
+        if (previous.direction == Directions::None || previous.direction == current.direction)
         {
             return current.straight_steps <= max_steps;
         }
@@ -225,9 +246,9 @@ private:
     /*
     Initializes a Proiority queue for the dijkstra algorithm
     */
-    std::priority_queue<DijkstraState, std::vector<DijkstraState>> initDijkstraQueue()
+    std::priority_queue<DijkstraState, std::vector<DijkstraState>, std::greater<DijkstraState>> initDijkstraQueue()
     {
-        std::priority_queue<DijkstraState, std::vector<DijkstraState>> pq;
+        std::priority_queue<DijkstraState, std::vector<DijkstraState>, std::greater<DijkstraState>> pq;
         const DijkstraState start;
         pq.emplace(start);
         return pq;
@@ -244,35 +265,36 @@ public:
     D17Solver &operator=(const D17Solver &) = default;
     D17Solver &operator=(D17Solver &&) = default;
 
+    /*
+    Solves the Advent of Code Day 17
+        max_steps: maximum number of steps allowed in a straight line
+        min_steps: minimum number of steps that need to be taken before you can turn
+    */
     unsigned int solve(unsigned int max_steps, unsigned int min_steps)
     {
         Timer t;
         this->min_steps = min_steps;
         this->max_steps = max_steps;
 
-        // Keeps track of visited "Configurations". Because of the limitations of either having to turn after a certain number of steps
-        // or not being able to turn for a certain amount of steps, it's possible that the shortest path to a tile in the map isn't
-        // necesserily the best one, if it means that you're not able to use the shortest path to the next tile due to the direction you arrived from
         std::unordered_set<DijkstraState, HashDijkstraState> visited;
-        
-        std::priority_queue<DijkstraState, std::vector<DijkstraState>> dijkstraQueue = initDijkstraQueue();
+
+        std::priority_queue<DijkstraState, std::vector<DijkstraState>, std::greater<DijkstraState>> dijkstraQueue = initDijkstraQueue();
 
         while (!dijkstraQueue.empty())
         {
             DijkstraState current = dijkstraQueue.top();
             dijkstraQueue.pop();
 
-            if (current.x == input_map[0].size() - 1 && current.y == input_map.size() - 1 /*&& current.straight_steps >= min_steps*/)
+            if (current.x == input_map[0].size() - 1 && current.y == input_map.size() - 1 && current.straight_steps >= min_steps)
             {
                 return current.path_length;
             }
-
             if (visited.find(current) == visited.end())
             {
                 visited.insert(current);
-                for (const auto &dir : {Up, Right, Down, Left})
+                for (const auto &dir : {Directions::Up, Directions::Right, Directions::Down, Directions::Left})
                 {
-                    auto new_state = getNewStateInTravelDir(current, dir, input_map);
+                    const auto new_state = getNewStateInTravelDir(current, dir, input_map);
                     if (new_state)
                     {
                         dijkstraQueue.emplace(*new_state);
@@ -286,15 +308,27 @@ public:
 
 int main(int argc, char const *argv[])
 {
-    D17Solver solver(argv[1]);
+    if (argc < 2)
+    {
+        return EXIT_FAILURE;
+    }
 
-    std::cout << "Part 1:\n";
-    unsigned int p1 = solver.solve(3, 0);
-    std::cout << "Answer: " << p1 << '\n';
+    try
+    {
+        D17Solver solver(argv[1]);
+        std::cout << "Part 1:\n";
+        unsigned int p1 = solver.solve(3, 0);
+        std::cout << "Answer: " << p1 << '\n';
 
-    std::cout << "Part 2:\n";
-    unsigned int p2 = solver.solve(10, 4);
-    std::cout << "Answer: " << p2 << '\n';
+        std::cout << "Part 2:\n";
+        unsigned int p2 = solver.solve(10, 4);
+        std::cout << "Answer: " << p2 << '\n';
+    }
+    catch (const std::runtime_error &e)
+    {
+        std::cerr << e.what() << std::endl;
+        return EXIT_FAILURE;
+    }
 
-    return 0;
+    return EXIT_SUCCESS;
 }
