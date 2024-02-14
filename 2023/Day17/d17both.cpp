@@ -9,9 +9,16 @@
 #include <vector>
 
 /*
-Refector ideas
-swap hashset for normal set? -> could lead to issues with sorting? if set uses binary search and i have lots of similar valies
-scoped enum?
+Refector ideas:
+    - swap hashset for something more performant? 
+        -> std::set: could lead to issues with sorting? if set uses binary search and i have lots of similar valies
+        -> 4Dimensional datastucture: 
+            ->very bad readability, prone to bugs, is it even better?
+    - scoped enum 
+        -> could it include the isReversing() function?
+    - Setting member variables in .solve() feels ugly
+    - think of something more performant for path finding like a more solid heuristic that wont mess with the constraints.
+        - Dijkstra has the advantage that we can quit once we find the finish for the first time.
 */
 enum class Directions
 {
@@ -80,6 +87,8 @@ private:
 
         bool operator>(DijkstraState const &other) const
         {
+            // Due to the constraints of our problem we know that the finish is always at the maximum 
+            // x and y indices. This is why I am using them as an additional heuristic for a small speed up.
             const int v1 = path_length - x - y;
             const int v2 = other.path_length - other.x - other.y;
             return v1 > v2;
@@ -270,11 +279,11 @@ public:
         max_steps: maximum number of steps allowed in a straight line
         min_steps: minimum number of steps that need to be taken before you can turn
     */
-    unsigned int solve(unsigned int max_steps, unsigned int min_steps)
+    unsigned int solve(unsigned int maxsteps, unsigned int minsteps)
     {
         Timer t;
-        this->min_steps = min_steps;
-        this->max_steps = max_steps;
+        this->min_steps = minsteps;
+        this->max_steps = maxsteps;
 
         std::unordered_set<DijkstraState, HashDijkstraState> visited;
 
