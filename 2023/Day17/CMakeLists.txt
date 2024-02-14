@@ -7,3 +7,4 @@ project(Day17)
 
 add_executable(part1 d17p1.cpp)
 add_executable(part2 d17p2.cpp)
+add_executable(both d17both.cpp)

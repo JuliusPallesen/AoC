@@ -12,7 +12,8 @@ enum Directions
     Up = 0,
     Right = 1,
     Down = 2,
-    Left = 3
+    Left = 3,
+    None = 4
 };
 
 struct DijkstraState
@@ -21,14 +22,24 @@ struct DijkstraState
     {
         this->x = 0;
         this->y = 0;
-        this->last_direction = Down;
-        this->straight_steps = 1;
+        this->last_direction = None;
+        this->straight_steps = 0;
         this->path_length = 0;
     }
 
     bool operator==(const DijkstraState &other) const
     {
         return x == other.x && y == other.y && last_direction == other.last_direction && straight_steps == other.straight_steps;
+    }
+
+    bool operator>(DijkstraState const &other) const
+    {
+        return this->path_length < other.path_length;
+    }
+
+    bool operator<(DijkstraState const &other) const
+    {
+        return this->path_length > other.path_length;
     }
 
     int x;
@@ -120,6 +131,18 @@ bool notReversing(Directions dir1, Directions dir2)
     return !(static_cast<int>(dir1) == ((static_cast<int>(dir2) + 2) % 4));
 }
 
+bool validTurn(const DijkstraState &previous, const DijkstraState &current)
+{
+    if (previous.last_direction == None || previous.last_direction == current.last_direction)
+    {
+        return true;
+    }
+    else
+    {
+        return previous.straight_steps >= 4;
+    }
+}
+
 /*
 Try to get an updated state in the direction of travel. If reversing, out of bounds or too many straight steps don't return anything.
 */
@@ -135,7 +158,8 @@ std::optional<DijkstraState> getNewStateInTravelDir(const DijkstraState &previou
 
     if (checkInBounds2D(new_state.x, new_state.y, map) &&
         notReversing(previous.last_direction, direction) &&
-        new_state.straight_steps <= 3)
+        validTurn(previous, new_state) &&
+        new_state.straight_steps <= 10)
     {
         new_state.path_length = previous.path_length + map[new_state.y][new_state.x];
         return new_state;
@@ -180,22 +204,11 @@ void printState(const DijkstraState &s)
 }
 
 /*
-Used to sort Dijkstrastates by their path length in the priority queue (needs to be a struct to be passed as template parameter)
-*/
-struct stateCmp
-{
-    bool operator()(DijkstraState const &state1, DijkstraState const &state2)
-    {
-        return state1.path_length > state2.path_length;
-    }
-};
-
-/*
 Initializes a Proiority queue for the dijkstra algorithm
 */
-std::priority_queue<DijkstraState, std::vector<DijkstraState>, stateCmp> initPrioQueue()
+std::priority_queue<DijkstraState, std::vector<DijkstraState>> initPrioQueue()
 {
-    std::priority_queue<DijkstraState, std::vector<DijkstraState>, stateCmp> pq;
+    std::priority_queue<DijkstraState, std::vector<DijkstraState>> pq;
     DijkstraState start;
     pq.emplace(start);
     return pq;
@@ -213,18 +226,24 @@ public:
     }
 };
 
+/*
+Performs Dijkstras algorithm (with restrictions) on the input.
+priority queue is used to keep track of which configurations / states should be expanded next.
+*/
 unsigned int getMinimalHeatloss(const std::vector<std::vector<int>> &map)
 {
+    // Keeps track of visited "Configurations". Because of the limitations of either having to turn after a certain number of steps
+    // or not being able to turn for a certain amount of steps, it's possible that the shortest path to a tile in the map isn't
+    // necesserily the best one, if it means that you're not able to use the shortest path to the next tile due to the direction you arrived from
     std::unordered_set<DijkstraState, HashDijkstra> visited;
-    std::priority_queue<DijkstraState, std::vector<DijkstraState>, stateCmp> dijkstraQueue = initPrioQueue();
-    const Directions directions[] = {Up, Right, Down, Left};
+
+    std::priority_queue<DijkstraState, std::vector<DijkstraState>> dijkstraQueue = initPrioQueue();
 
     while (!dijkstraQueue.empty())
     {
         DijkstraState current = dijkstraQueue.top();
         dijkstraQueue.pop();
-
-        if (current.x == map[0].size() - 1 && current.y == map.size() - 1)
+        if (current.x == map[0].size() - 1 && current.y == map.size() - 1 && current.straight_steps >= 4)
         {
             return current.path_length;
         }
@@ -232,7 +251,7 @@ unsigned int getMinimalHeatloss(const std::vector<std::vector<int>> &map)
         if (visited.find(current) == visited.end())
         {
             visited.insert(current);
-            for (const auto &dir : directions)
+            for (const auto &dir : {Up, Right, Down, Left})
             {
                 auto new_state = getNewStateInTravelDir(current, dir, map);
                 if (new_state)
@@ -250,6 +269,6 @@ int main(int argc, char const *argv[])
     std::vector<std::vector<int>> map;
     map = retrievePuzzleInput(argv[1]);
 
-    std::cout << getMinimalHeatloss(map);
+    std::cout << getMinimalHeatloss(map) << std::endl;
     return 0;
 }

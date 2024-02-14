@@ -50,8 +50,8 @@ private:
         unsigned int x;
         unsigned int y;
         unsigned int path_length;
-        Directions last_direction;
         unsigned int straight_steps;
+        Directions last_direction;
 
         DijkstraState() : last_direction(None), x(0), y(0), path_length(0), straight_steps(0)
         {
@@ -227,8 +227,7 @@ private:
     std::priority_queue<DijkstraState, std::vector<DijkstraState>> initDijkstraQueue()
     {
         std::priority_queue<DijkstraState, std::vector<DijkstraState>> pq;
-        ;
-        DijkstraState start;
+        const DijkstraState start;
         pq.emplace(start);
         return pq;
     }
@@ -252,6 +251,7 @@ public:
         // Keeps track of visited "Configurations". Because of the limitations of either having to turn after a certain number of steps
         // or not being able to turn for a certain amount of steps, it's possible that the shortest path to a tile in the map isn't
         // necesserily the best one, if it means that you're not able to use the shortest path to the next tile due to the direction you arrived from
+
         std::unordered_set<DijkstraState, HashDijkstraState> visited;
         std::priority_queue<DijkstraState, std::vector<DijkstraState>> dijkstraQueue = initDijkstraQueue();
 
