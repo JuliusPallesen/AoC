@@ -253,7 +253,7 @@ unsigned int getMinimalHeatloss(const std::vector<std::vector<int>> &map)
             visited.insert(current);
             for (const auto &dir : {Up, Right, Down, Left})
             {
-                auto new_state = getNewStateInTravelDir(current, dir, map);
+                const auto new_state = getNewStateInTravelDir(current, dir, map);
                 if (new_state)
                 {
                     dijkstraQueue.emplace(*new_state);

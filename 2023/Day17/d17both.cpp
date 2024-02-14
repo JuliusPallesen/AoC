@@ -118,6 +118,7 @@ private:
                 break;
             }
         }
+
         void takeStep()
         {
             switch (last_direction)
@@ -248,11 +249,12 @@ public:
         Timer t;
         this->min_steps = min_steps;
         this->max_steps = max_steps;
+
         // Keeps track of visited "Configurations". Because of the limitations of either having to turn after a certain number of steps
         // or not being able to turn for a certain amount of steps, it's possible that the shortest path to a tile in the map isn't
         // necesserily the best one, if it means that you're not able to use the shortest path to the next tile due to the direction you arrived from
-
         std::unordered_set<DijkstraState, HashDijkstraState> visited;
+        
         std::priority_queue<DijkstraState, std::vector<DijkstraState>> dijkstraQueue = initDijkstraQueue();
 
         while (!dijkstraQueue.empty())
