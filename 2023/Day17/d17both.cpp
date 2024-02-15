@@ -46,6 +46,7 @@ private:
     const std::chrono::steady_clock::time_point start;
 };
 
+
 class D17Solver
 {
 private:
@@ -104,25 +105,21 @@ private:
         }
 
     private:
+        // default anti pattern
         char getDirectionChar()
         {
             switch (direction)
             {
             case Directions::Up:
                 return '^';
-                break;
             case Directions::Right:
                 return '>';
-                break;
             case Directions::Down:
                 return 'v';
-                break;
             case Directions::Left:
                 return '<';
-                break;
             default:
                 return 'x';
-                break;
             }
         }
 
@@ -142,7 +139,7 @@ private:
             case Directions::Right:
                 ++x;
                 break;
-            default:
+            case Directions::None:
                 break;
             }
         }
@@ -282,8 +279,8 @@ public:
     unsigned int solve(unsigned int maxsteps, unsigned int minsteps)
     {
         Timer t;
-        this->min_steps = minsteps;
-        this->max_steps = maxsteps;
+        min_steps = minsteps;
+        max_steps = maxsteps;
 
         std::unordered_set<DijkstraState, HashDijkstraState> visited;
 
@@ -306,7 +303,7 @@ public:
                     const auto new_state = getNewStateInTravelDir(current, dir, input_map);
                     if (new_state)
                     {
-                        dijkstraQueue.emplace(*new_state);
+                        dijkstraQueue.push(*new_state);
                     }
                 }
             }
