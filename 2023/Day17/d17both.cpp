@@ -10,14 +10,15 @@
 
 /*
 Refector ideas:
-    - swap hashset for something more performant? 
+    - swap hashset for something more performant?
         -> std::set: could lead to issues with sorting? if set uses binary search and i have lots of similar valies
-        -> 4Dimensional datastucture: 
+        -> 4Dimensional datastucture:
             ->very bad readability, prone to bugs, is it even better?
-    - scoped enum 
+    - scoped enum
         -> could it include the isReversing() function?
     - Setting member variables in .solve() feels ugly
     - think of something more performant for path finding like a more solid heuristic that wont mess with the constraints.
+        - DijkstraState doesn't know about inputMap2D size
         - Dijkstra has the advantage that we can quit once we find the finish for the first time.
 */
 enum class Directions
@@ -32,7 +33,6 @@ enum class Directions
 class Timer
 {
 public:
-
     Timer() : start(std::chrono::steady_clock::now())
     {
     }
@@ -46,20 +46,74 @@ private:
     const std::chrono::steady_clock::time_point start;
 };
 
-
 class D17Solver
 {
+public:
+    D17Solver(std::string inputfilepath) : input_map(retrievePuzzleInput(inputfilepath))
+    {
+    }
+
+    ~D17Solver() = default;
+    D17Solver(const D17Solver &) = default;
+    D17Solver(D17Solver &&) = default;
+    D17Solver &operator=(const D17Solver &) = default;
+    D17Solver &operator=(D17Solver &&) = default;
+
+    /*
+    Solves the Advent of Code Day 17
+        max_steps: maximum number of steps allowed in a straight line
+        min_steps: minimum number of steps that need to be taken before you can turn
+    */
+    uint32_t solve(uint32_t maxsteps, uint32_t minsteps)
+    {
+        Timer t;
+        this->min_steps = minsteps;
+        this->max_steps = maxsteps;
+
+        std::unordered_set<DijkstraState, HashDijkstraState> visited;
+
+        DijkstraQueue dijkstraQueue = initDijkstraQueue();
+
+        while (!dijkstraQueue.empty())
+        {
+            DijkstraState current = dijkstraQueue.top();
+            dijkstraQueue.pop();
+
+            if (current.x == input_map[0].size() - 1 && current.y == input_map.size() - 1 && current.straight_steps >= min_steps)
+            {
+                return current.path_length;
+            }
+            if (visited.find(current) == visited.end())
+            {
+                visited.insert(current);
+                for (const auto &dir : {Directions::Up, Directions::Right, Directions::Down, Directions::Left})
+                {
+                    const auto new_state = getNewStateInTravelDir(current, dir, input_map);
+                    if (new_state)
+                    {
+                        dijkstraQueue.push(*new_state);
+                    }
+                }
+            }
+        }
+        return INT_MAX;
+    };
+
 private:
-    const std::vector<std::vector<unsigned int>> input_map;
-    unsigned int min_steps;
-    unsigned int max_steps;
+    struct DijkstraState;
+    using inputMap2D = std::vector<std::vector<uint32_t>>;
+    using DijkstraQueue = std::priority_queue<DijkstraState, std::vector<DijkstraState>, std::greater<DijkstraState>>;
+
+    const inputMap2D input_map;
+    uint32_t min_steps;
+    uint32_t max_steps;
 
     struct DijkstraState
     {
-        unsigned int x;
-        unsigned int y;
-        unsigned int path_length;
-        unsigned int straight_steps;
+        uint32_t x;
+        uint32_t y;
+        uint32_t path_length;
+        uint32_t straight_steps;
         Directions direction;
 
         DijkstraState() : x(0), y(0), path_length(0), straight_steps(0), direction(Directions::None)
@@ -88,14 +142,14 @@ private:
 
         bool operator>(DijkstraState const &other) const
         {
-            // Due to the constraints of our problem we know that the finish is always at the maximum 
+            // Due to the constraints of our problem we know that the finish is always at the maximum
             // x and y indices. This is why I am using them as an additional heuristic for a small speed up.
             const int v1 = path_length - x - y;
             const int v2 = other.path_length - other.x - other.y;
             return v1 > v2;
         }
 
-        void printState()
+        void printState() const
         {
             std::cout << '\n';
             std::cout << "Path length: " << path_length << '\n';
@@ -105,8 +159,7 @@ private:
         }
 
     private:
-        // default anti pattern
-        char getDirectionChar()
+        char getDirectionChar() const
         {
             switch (direction)
             {
@@ -125,22 +178,24 @@ private:
 
         void takeStep()
         {
+            // Better to let underflow happen and handle it in inputMap2D bounds check. 
+            // only decrementing if > 0 leads to the case where you're allowed to take "steps" in-place by running into walls
             switch (direction)
             {
             case Directions::Up:
-                y == 0 ? 0 : --y;
+                y--; 
                 break;
             case Directions::Left:
-                x == 0 ? 0 : --x;
+                x--;
                 break;
             case Directions::Down:
-                ++y;
+                y++;
                 break;
             case Directions::Right:
-                ++x;
+                x++;
                 break;
             case Directions::None:
-                break;
+                throw(std::runtime_error("Can't take step in Directions::None\n"));
             }
         }
 
@@ -165,10 +220,10 @@ private:
     public:
         size_t operator()(const DijkstraState &step) const
         {
-            return std::hash<unsigned int>()(step.x) ^
-                   std::hash<unsigned int>()(step.y) ^
+            return std::hash<uint32_t>()(step.x) ^
+                   std::hash<uint32_t>()(step.y) ^
                    std::hash<Directions>()(step.direction) ^
-                   std::hash<unsigned int>()(step.straight_steps);
+                   std::hash<uint32_t>()(step.straight_steps);
         }
     };
 
@@ -176,12 +231,12 @@ private:
     Tries to create a new DijkstraStep based on the previous DijkstraStep and a Direction.
     Only returns a DijkstraStep if the step is valid and all conditions are met.
     */
-    std::optional<DijkstraState> getNewStateInTravelDir(const DijkstraState &previous, const Directions direction, const std::vector<std::vector<unsigned int>> &map)
+    std::optional<DijkstraState> getNewStateInTravelDir(const DijkstraState &previous, const Directions direction, const inputMap2D &map)
     {
         DijkstraState current(previous, direction);
 
         if (checkInBounds2D(current.x, current.y, map) &&
-            notReversing(previous.direction, current.direction) &&
+            !isReversing(previous.direction, current.direction) &&
             isValidMove(previous, current))
         {
             current.path_length = previous.path_length + map[current.y][current.x];
@@ -193,9 +248,9 @@ private:
     /*
     Retrieves the puzzleinput from a file and converts it to a suitable format
     */
-    std::vector<std::vector<unsigned int>> retrievePuzzleInput(const std::string &inputfilepath)
+    inputMap2D retrievePuzzleInput(const std::string &inputfilepath)
     {
-        std::vector<std::vector<unsigned int>> ret;
+        inputMap2D ret;
         std::ifstream inputFile;
         std::string line;
         inputFile.open(inputfilepath);
@@ -219,17 +274,18 @@ private:
     /*
     Checks if a Position is inside of a 2D vector
     */
-    inline bool checkInBounds2D(unsigned int x, unsigned int y, const std::vector<std::vector<unsigned int>> &vec)
+    inline bool checkInBounds2D(uint32_t x, uint32_t y, const inputMap2D &vec)
     {
         return x < vec[0].size() && y < vec.size();
     }
 
     /*
     Checks if 2 directions of travel cancel eachother out (e.g. reversing)
+    Enum layout lets us calculate the opposite direction instead of checking it with if else or switch
     */
-    inline bool notReversing(Directions dir1, Directions dir2)
+    inline bool isReversing(Directions dir1, Directions dir2)
     {
-        return !(static_cast<int>(dir1) == ((static_cast<int>(dir2) + 2) % 4));
+        return (static_cast<int>(dir1) == ((static_cast<int>(dir2) + 2) % 4));
     }
 
     /*
@@ -252,64 +308,12 @@ private:
     /*
     Initializes a Proiority queue for the dijkstra algorithm
     */
-    std::priority_queue<DijkstraState, std::vector<DijkstraState>, std::greater<DijkstraState>> initDijkstraQueue()
+    DijkstraQueue initDijkstraQueue()
     {
-        std::priority_queue<DijkstraState, std::vector<DijkstraState>, std::greater<DijkstraState>> pq;
-        const DijkstraState start;
-        pq.emplace(start);
-        return pq;
+        DijkstraQueue dq;
+        dq.emplace();
+        return dq;
     }
-
-public:
-    D17Solver(std::string inputfilepath) : input_map(retrievePuzzleInput(inputfilepath))
-    {
-    }
-
-    ~D17Solver() = default;
-    D17Solver(const D17Solver &) = default;
-    D17Solver(D17Solver &&) = default;
-    D17Solver &operator=(const D17Solver &) = default;
-    D17Solver &operator=(D17Solver &&) = default;
-
-    /*
-    Solves the Advent of Code Day 17
-        max_steps: maximum number of steps allowed in a straight line
-        min_steps: minimum number of steps that need to be taken before you can turn
-    */
-    unsigned int solve(unsigned int maxsteps, unsigned int minsteps)
-    {
-        Timer t;
-        min_steps = minsteps;
-        max_steps = maxsteps;
-
-        std::unordered_set<DijkstraState, HashDijkstraState> visited;
-
-        std::priority_queue<DijkstraState, std::vector<DijkstraState>, std::greater<DijkstraState>> dijkstraQueue = initDijkstraQueue();
-
-        while (!dijkstraQueue.empty())
-        {
-            DijkstraState current = dijkstraQueue.top();
-            dijkstraQueue.pop();
-
-            if (current.x == input_map[0].size() - 1 && current.y == input_map.size() - 1 && current.straight_steps >= min_steps)
-            {
-                return current.path_length;
-            }
-            if (visited.find(current) == visited.end())
-            {
-                visited.insert(current);
-                for (const auto &dir : {Directions::Up, Directions::Right, Directions::Down, Directions::Left})
-                {
-                    const auto new_state = getNewStateInTravelDir(current, dir, input_map);
-                    if (new_state)
-                    {
-                        dijkstraQueue.push(*new_state);
-                    }
-                }
-            }
-        }
-        return INT_MAX;
-    };
 };
 
 int main(int argc, char const *argv[])
@@ -323,11 +327,11 @@ int main(int argc, char const *argv[])
     {
         D17Solver solver(argv[1]);
         std::cout << "Part 1:\n";
-        unsigned int p1 = solver.solve(3, 0);
+        uint32_t p1 = solver.solve(3, 0);
         std::cout << "Answer: " << p1 << '\n';
 
         std::cout << "Part 2:\n";
-        unsigned int p2 = solver.solve(10, 4);
+        uint32_t p2 = solver.solve(10, 4);
         std::cout << "Answer: " << p2 << '\n';
     }
     catch (const std::runtime_error &e)
