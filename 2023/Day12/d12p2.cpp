@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <chrono>
 #include <fstream>
 #include <iostream>
 #include <optional>
@@ -6,14 +7,25 @@
 #include <unordered_map>
 #include <vector>
 
+class Timer {
+public:
+    Timer()
+        : start(std::chrono::steady_clock::now())
+    {
+    }
+    ~Timer()
+    {
+        std::cout << "time elapsed: " << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start).count()
+                  << "ms" << std::endl;
+    }
+
+private:
+    const std::chrono::steady_clock::time_point start;
+};
+
 struct State {
     std::string rest_puzzle;
     std::vector<uint64_t> rest_input;
-    State(std::string p, std::vector<uint64_t> i)
-        : rest_puzzle(p)
-        , rest_input(i)
-    {
-    }
     bool operator==(const State& other) const
     {
         return rest_input == other.rest_input && rest_puzzle == other.rest_puzzle;
@@ -25,7 +37,7 @@ struct StateHash {
     {
         std::size_t hash = std::hash<std::string> {}(state.rest_puzzle);
         for (uint64_t value : state.rest_input) {
-            hash ^= std::hash<uint64_t> {}(value) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
+            hash ^= std::hash<uint64_t> {}(value);
         }
         return hash;
     }
@@ -40,11 +52,7 @@ std::optional<State> performDot(State s, bool in = false)
         s.rest_input.pop_back();
     }
     s.rest_puzzle.pop_back();
-    if (!(s.rest_puzzle.empty() && !s.rest_input.empty())) {
-        return s;
-    } else {
-        return {};
-    }
+    return !(s.rest_puzzle.empty() && !s.rest_input.empty()) ? s : std::optional<State>();
 }
 
 std::optional<State> performHash(State s, bool in = false)
@@ -77,15 +85,11 @@ uint64_t getAllPossibilities(State s,
 
     if (curr == '.' || curr == '?') {
         auto dotState = performDot(s, in);
-        auto val = dotState ? getAllPossibilities(*dotState, mep, false) : 0;
-        mep[*dotState] = val;
-        ret += val;
+        ret += dotState ? getAllPossibilities(*dotState, mep, false) : 0;
     }
     if (curr == '#' || curr == '?') {
         auto hashState = performHash(s, in);
-        auto val = hashState ? getAllPossibilities(*hashState, mep, true) : 0;
-        mep[*hashState] = val;
-        ret += val;
+        ret += hashState ? getAllPossibilities(*hashState, mep, true) : 0;
     }
     mep[s] = ret;
     return ret;
@@ -95,8 +99,7 @@ std::string duplicatePuzzleFiveTimes(const std::string& input)
 {
     std::string ret;
     for (size_t i = 0; i < 5; i++) {
-        ret += input;
-        ret += "?";
+        ret += input + "?";
     }
     ret.pop_back();
     return ret;
@@ -116,9 +119,11 @@ int main(int argc, char const* argv[])
     std::ifstream inputFile;
     inputFile.open(argv[1]);
     std::string line;
-    uint64_t ans;
+    uint64_t ans = 0;
     std::vector<std::string> puzzles;
     std::vector<std::vector<uint64_t>> inputs;
+    Timer t;
+
     while (std::getline(inputFile, line)) {
         const auto space_pos = line.find(' ');
         puzzles.push_back(duplicatePuzzleFiveTimes(line.substr(0, space_pos)));
@@ -132,15 +137,12 @@ int main(int argc, char const* argv[])
         inputs.push_back(duplicateInputFiveTimes(inpt));
     }
     inputFile.close();
-    ans = 0;
+
     for (size_t i = 0; i < puzzles.size(); i++) {
-        std::cout << i << '/' << puzzles.size() << '\n';
         std::unordered_map<State, uint64_t, StateHash> mep;
-        auto val = getAllPossibilities({ puzzles[i], inputs[i] }, mep);
-        std::cout << val << '\n';
-        ans += val;
+        ans += getAllPossibilities({ puzzles[i], inputs[i] }, mep);
     }
 
-    std::cout << ans;
+    std::cout << ans << '\n';
     return 0;
 }
