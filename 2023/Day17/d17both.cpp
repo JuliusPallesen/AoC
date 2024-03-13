@@ -21,6 +21,7 @@ Refector ideas:
         - DijkstraState doesn't know about inputMap2D size
         - Dijkstra has the advantage that we can quit once we find the finish for the first time.
 */
+
 enum class Directions
 {
     Up = 0,
@@ -79,7 +80,7 @@ public:
             DijkstraState current = dijkstraQueue.top();
             dijkstraQueue.pop();
 
-            if (current.x == input_map[0].size() - 1 && current.y == input_map.size() - 1 && current.straight_steps >= min_steps)
+            if (current.straight_steps >= min_steps && current.x == input_map[0].size() - 1 && current.y == input_map.size() - 1)
             {
                 return current.path_length;
             }
@@ -144,9 +145,7 @@ private:
         {
             // Due to the constraints of our problem we know that the finish is always at the maximum
             // x and y indices. This is why I am using them as an additional heuristic for a small speed up.
-            const int v1 = path_length - x - y;
-            const int v2 = other.path_length - other.x - other.y;
-            return v1 > v2;
+            return (path_length - x - y) > (other.path_length - other.x - other.y);
         }
 
         void printState() const
@@ -171,7 +170,7 @@ private:
                 return 'v';
             case Directions::Left:
                 return '<';
-            default:
+            case Directions::None:
                 return 'x';
             }
         }
@@ -257,7 +256,7 @@ private:
 
         if (!inputFile.is_open())
         {
-            throw std::runtime_error("Couldn't open file.");
+            throw std::runtime_error("Couldn't open file.\n");
         }
 
         while (std::getline(inputFile, line))
@@ -268,6 +267,11 @@ private:
         }
 
         inputFile.close();
+        
+        if(ret.size() == 0) {
+            throw std::runtime_error("Incorrect file input.\n");
+        }
+
         return ret;
     }
 
