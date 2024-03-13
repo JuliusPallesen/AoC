@@ -29,10 +29,10 @@ bool performHash(std::string& rest_puzzle, std::vector<int>& rest_input, bool in
 int getAllPossibilities(const std::string rest_puzzle, const std::vector<int> rest_input, bool in = false)
 {
     if (rest_input.empty()) {
-        return rest_puzzle.find('#') == std::string::npos ? 1 : 0;
+        return rest_puzzle.find('#') == std::string::npos;
     }
     if (rest_puzzle.empty()) {
-        return (rest_input.size() == 1 && rest_input[0] == 0) ? 1 : 0;
+        return rest_input.size() == 1 && rest_input[0] == 0;
     }
 
     const auto curr = rest_puzzle[rest_puzzle.size() - 1];
