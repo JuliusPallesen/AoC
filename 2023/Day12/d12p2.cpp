@@ -1,31 +1,10 @@
 #include <algorithm>
 #include <fstream>
 #include <iostream>
+#include <optional>
 #include <sstream>
 #include <unordered_map>
 #include <vector>
-
-bool performDot(std::string& rest_puzzle, std::vector<uint64_t>& rest_input, bool in = false)
-{
-    if (in && rest_input[rest_input.size() - 1] > 0) {
-        return false;
-    }
-    if (!rest_input.empty() && rest_input[rest_input.size() - 1] == 0) {
-        rest_input.pop_back();
-    }
-    rest_puzzle.pop_back();
-    return !(rest_puzzle.empty() && !rest_input.empty());
-}
-
-bool performHash(std::string& rest_puzzle, std::vector<uint64_t>& rest_input, bool in = false)
-{
-    if (rest_input.empty() || rest_input[rest_input.size() - 1] == 0) {
-        return false;
-    }
-    rest_input[rest_input.size() - 1]--;
-    rest_puzzle.pop_back();
-    return true;
-}
 
 struct State {
     std::string rest_puzzle;
@@ -52,6 +31,32 @@ struct StateHash {
     }
 };
 
+std::optional<State> performDot(State s, bool in = false)
+{
+    if (in && s.rest_input[s.rest_input.size() - 1] > 0) {
+        return {};
+    }
+    if (!s.rest_input.empty() && s.rest_input[s.rest_input.size() - 1] == 0) {
+        s.rest_input.pop_back();
+    }
+    s.rest_puzzle.pop_back();
+    if (!(s.rest_puzzle.empty() && !s.rest_input.empty())) {
+        return s;
+    } else {
+        return {};
+    }
+}
+
+std::optional<State> performHash(State s, bool in = false)
+{
+    if (s.rest_input.empty() || s.rest_input[s.rest_input.size() - 1] == 0) {
+        return {};
+    }
+    s.rest_input[s.rest_input.size() - 1]--;
+    s.rest_puzzle.pop_back();
+    return s;
+}
+
 uint64_t getAllPossibilities(State s,
     std::unordered_map<State, uint64_t, StateHash>& mep,
     bool in = false)
@@ -71,14 +76,16 @@ uint64_t getAllPossibilities(State s,
     uint64_t ret = 0;
 
     if (curr == '.' || curr == '?') {
-        auto dot_rest_puzzle = s.rest_puzzle;
-        auto dot_rest_input = s.rest_input;
-        ret += performDot(dot_rest_puzzle, dot_rest_input, in) ? getAllPossibilities({ dot_rest_puzzle, dot_rest_input }, mep, false) : 0;
+        auto dotState = performDot(s, in);
+        auto val = dotState ? getAllPossibilities(*dotState, mep, false) : 0;
+        mep[*dotState] = val;
+        ret += val;
     }
     if (curr == '#' || curr == '?') {
-        auto hash_rest_puzzle = s.rest_puzzle;
-        auto hash_rest_input = s.rest_input;
-        ret += performHash(hash_rest_puzzle, hash_rest_input, in) ? getAllPossibilities({ hash_rest_puzzle, hash_rest_input }, mep, true) : 0;
+        auto hashState = performHash(s, in);
+        auto val = hashState ? getAllPossibilities(*hashState, mep, true) : 0;
+        mep[*hashState] = val;
+        ret += val;
     }
     mep[s] = ret;
     return ret;
@@ -125,11 +132,12 @@ int main(int argc, char const* argv[])
         inputs.push_back(duplicateInputFiveTimes(inpt));
     }
     inputFile.close();
-
+    ans = 0;
     for (size_t i = 0; i < puzzles.size(); i++) {
         std::cout << i << '/' << puzzles.size() << '\n';
         std::unordered_map<State, uint64_t, StateHash> mep;
         auto val = getAllPossibilities({ puzzles[i], inputs[i] }, mep);
+        std::cout << val << '\n';
         ans += val;
     }
 
