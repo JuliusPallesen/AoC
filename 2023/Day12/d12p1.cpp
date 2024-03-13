@@ -26,31 +26,27 @@ bool performHash(std::string& rest_puzzle, std::vector<int>& rest_input, bool in
     return true;
 }
 
-int getAllPossibilities(const std::string& rest_puzzle, const std::vector<int>& rest_input, bool in = false)
+int getAllPossibilities(const std::string rest_puzzle, const std::vector<int> rest_input, bool in = false)
 {
     if (rest_input.empty()) {
         return rest_puzzle.find('#') == std::string::npos ? 1 : 0;
     }
     if (rest_puzzle.empty()) {
-        if (rest_input.size() == 1 && rest_input[0] == 0) {
-            return 1;
-        } else {
-            return 0;
-        }
+        return (rest_input.size() == 1 && rest_input[0] == 0) ? 1 : 0;
     }
 
     const auto curr = rest_puzzle[rest_puzzle.size() - 1];
     int ret = 0;
 
     if (curr == '.' || curr == '?') {
-        std::string dot_rest_puzzle = rest_puzzle;
-        std::vector<int> dot_rest_input = rest_input;
-        ret += performDot(dot_rest_puzzle, dot_rest_input, in) ? getAllPossibilities(dot_rest_puzzle, dot_rest_input, false) : 0;
+        auto dot_rest_puzzle = rest_puzzle;
+        auto dot_rest_input = rest_input;
+        ret += performDot(dot_rest_puzzle, dot_rest_input, in) ? getAllPossibilities(std::move(dot_rest_puzzle), std::move(dot_rest_input), false) : 0;
     }
     if (curr == '#' || curr == '?') {
-        std::string hash_rest_puzzle = rest_puzzle;
-        std::vector<int> hash_rest_input = rest_input;
-        ret += performHash(hash_rest_puzzle, hash_rest_input, in) ? getAllPossibilities(hash_rest_puzzle, hash_rest_input, true) : 0;
+        auto hash_rest_puzzle = rest_puzzle;
+        auto hash_rest_input = rest_input;
+        ret += performHash(hash_rest_puzzle, hash_rest_input, in) ? getAllPossibilities(std::move(hash_rest_puzzle), std::move(hash_rest_input), true) : 0;
     }
     return ret;
 }
@@ -74,13 +70,13 @@ int main(int argc, char const* argv[])
             inputs[inputs.size() - 1].push_back(stoi(str));
         }
     }
+    inputFile.close();
 
     for (size_t i = 0; i < puzzles.size(); i++) {
         auto val = getAllPossibilities(puzzles[i], inputs[i]);
         ans += val;
     }
 
-    inputFile.close();
     std::cout << ans;
     return 0;
 }
