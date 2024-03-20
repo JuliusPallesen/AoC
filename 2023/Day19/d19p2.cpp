@@ -10,18 +10,24 @@
 class Step;
 class StepFactory;
 
+/*
+MachinePartRanges represent possible solutions to the Problem
+*/
 struct MachinePartRange
 {
-    struct range
+    // default range 1-4000
+    // could pick a smaller type here but too lazy to search for conversion errors
+    struct Range
     {
         uint64_t from = 1;
         uint64_t to = 4000;
     };
-    range x, m, a, s;
+    Range x, m, a, s;
 
+    // Returns the number of possible combinations of variables for the ranges (watch out for the nasty off by 1 error)
     inline uint64_t getProd()
     {
-        return 1 * (x.to - x.from + 1) * (m.to - m.from + 1) * (a.to - a.from + 1) * (s.to - s.from + 1);
+        return (x.to - x.from + 1) * (m.to - m.from + 1) * (a.to - a.from + 1) * (s.to - s.from + 1);
     }
 
     inline bool isValid()
@@ -29,16 +35,8 @@ struct MachinePartRange
         return (x.to >= x.from) && (m.to >= m.from) && (a.to >= a.from) && (s.to >= s.from);
     }
 
-    inline void print()
-    {
-        std::cout << "{"
-                  << "x: " << x.from << "-" << x.to << "\t"
-                  << "m: " << m.from << "-" << m.to << "\t"
-                  << "a: " << a.from << "-" << a.to << "\t"
-                  << "s: " << s.from << "-" << s.to << "}\n";
-    }
-
-    range &operator[](const char c)
+    // Scuffed []operator for easy variable access
+    Range &operator[](const char c)
     {
         switch (c)
         {
@@ -162,6 +160,12 @@ public:
     }
 
 private:
+    /*
+    Tries to apply a rule to a ranged machine part.
+    if its not an empty operator we return a new range with only accepting values and modify the old
+    range in a way that it only rejects the rule (done so you dont count ranges multiple times. a rule
+    has to fail in order for you to reach the next rule in a step).
+    */
     std::optional<MachinePartRange> getNext(MachinePartRange &m, const std::shared_ptr<Rule> &r)
     {
         if (!r->operand)
@@ -203,6 +207,13 @@ public:
     RejectingStep() { name = "R"; }
 };
 
+/*
+Used to build the tree structure of the Steps.
+
+incase step's that are referenced by rules aren't created yet, rules can wait for said steps
+and be notified once they are created. this way we can use references for out rules and steps.
+probably still not that efficient...
+*/
 class StepFactory
 {
 public:
@@ -300,19 +311,17 @@ int main(int argc, char const *argv[])
         MachinePart part;
         while (std::getline(ss, str, ','))
         {
-            int val = stoi(str.substr(str.find('=') + 1, str.size()));
-            part[str[0]] = val;
+            part[str[0]] = stoi(str.substr(str.find('=') + 1, str.size()));
         }
         if (sf.getFirstStep()->isValidPart(part))
             ans += part.getSum();
     }
     inputFile.close();
+
     std::cout << "p1: " << ans << "\n";
+
     MachinePartRange m;
     ans = sf.getFirstStep()->getPossibilities(m);
     std::cout << "p2: " << ans << "\n";
-    std::cout << "ex: 167409079868000\n";
-    // ans: 167409079868000
-    // now: 167289746868108
     return 0;
 }
