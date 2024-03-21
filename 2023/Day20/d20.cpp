@@ -10,28 +10,6 @@
 #include <string>
 #include <type_traits>
 
-/*
-modules
-% flipflop
-has state
-ignores high pulse
-on low pulse invert state and send signal
-
-
-& conjunction
-remembers last received input for all incoming signals
-when reveiving input
-    -> update remembered signal in slot
-    -> if all are high emit low
-    -> else emit high
-
-broadcaster
-propagate signal
-
-
-fifo queue for signals
-*/
-
 constexpr bool HIGH = true;
 constexpr bool LOW = false;
 
@@ -41,9 +19,15 @@ class ModuleEnvironment;
 
 struct Signal
 {
-    Signal(std::string s, std::string d, State b) : source(s), destination(d), state(b) {}
     std::string source, destination;
-    bool state;
+    State state;
+
+    Signal(std::string s, std::string d, State b) : source(s), destination(d), state(b) {}
+
+    void print() const
+    {
+        std::cout << source << " -" << ((state) ? "high-> " : "low-> ") << destination << "\n";
+    }
 };
 
 class Module
@@ -53,6 +37,7 @@ public:
     virtual std::vector<Signal> processSignal(const Signal &s) = 0;
     virtual void addIncomingConnection(const std::string &module){};
     virtual ~Module() {}
+    virtual void print() {}
 
 protected:
     std::string m_name;
@@ -60,6 +45,7 @@ protected:
 
     Module(std::string name, std::vector<std::string> destinations) : m_name(std::move(name)),
                                                                       m_destinations(std::move(destinations)) {}
+
     std::vector<Signal> generateOutgoingSignals(State s)
     {
         std::vector<Signal> out;
@@ -82,6 +68,8 @@ public:
         return generateOutgoingSignals(m_state);
     }
 
+    void print() override { std::cout << "FlipFlop: " << m_name << " state: " << (m_state ? "HIGH" : "LOW") << "\n"; }
+
 private:
     bool m_state;
 };
@@ -100,6 +88,16 @@ public:
         return generateOutgoingSignals(getState());
     }
 
+    void print() override
+    {
+        std::cout << "Conjunction: " << m_name << "\n{";
+        for (auto &&state : states)
+        {
+            std::cout << state.first << ": " << (state.second ? "High" : "Low") << ",";
+        }
+        std::cout << "}\n";
+    }
+
 private:
     std::unordered_map<std::string, State> states;
     bool getState()
@@ -116,11 +114,13 @@ private:
 class Broadcaster : public Module
 {
 public:
-    Broadcaster(std::vector<std::string> destinations) : Module("broadcaster", destinations) {}
+    Broadcaster(std::string name, std::vector<std::string> destinations) : Module("broadcaster", destinations) {}
     std::vector<Signal> processSignal(const Signal &s) override
     {
         return generateOutgoingSignals(s.state);
     }
+
+    void print() override { std::cout << "Broadcaster: " << m_name << "\n"; }
 };
 
 class ModuleEnvironment
@@ -128,6 +128,7 @@ class ModuleEnvironment
 public:
     std::unordered_map<std::string, std::unique_ptr<Module>> modules;
     std::queue<Signal> signalQueue;
+
     void addModule(const std::string &input)
     {
         if (input[0] == '%')
@@ -142,38 +143,77 @@ public:
             }
             else
             {
-                // makeModules<Broadcaster>(input);
+                makeModules<Broadcaster>(input);
             }
+        }
+    }
+
+    bool pushButton()
+    {
+        if (signalQueue.empty())
+        {
+            signalQueue.emplace("button", "broadcaster", LOW);
+            return true;
+        }
+        return false;
+    }
+
+    void evaluateSignals()
+    {
+        while (!signalQueue.empty())
+        {
+            Signal s = signalQueue.front();
+            signalQueue.pop();
+            s.state ? ++highCount : ++lowCount;
+            if (modules.count(s.destination))
+            {
+                const auto outSignals = modules[s.destination]->processSignal(s);
+                for (const Signal &out : outSignals)
+                {
+                    signalQueue.push(out);
+                }
+            }
+        }
+    }
+
+    uint64_t getResult()
+    {
+        std::cout << "High Signals: " << highCount << "\n";
+        std::cout << "Low Signals: " << lowCount << "\n";
+        return highCount * lowCount;
+    }
+
+    void printModules()
+    {
+        for (auto &&modPair : modules)
+        {
+            modPair.second->print();
         }
     }
 
 private:
     std::unordered_map<std::string, std::vector<std::string>> waiting;
+    uint64_t highCount = 0;
+    uint64_t lowCount = 0;
 
-    template <typename T>
+    template <typename T, typename std::enable_if<std::is_base_of<Module, T>::value>::type * = nullptr>
     void makeModules(const std::string &input)
     {
-        const std::string name = getName(input);
+        const auto name = (std::is_same<T, Broadcaster>::value) ? "broadcaster" : getName(input);
         modules[name] = std::make_unique<T>(name, getDestinations(input));
         notifyDestinations(modules[name]);
+        notifyWaiters(modules[name]);
     }
-    /*
-    void makeModules<Broadcaster>(const std::string &input)
-    {
-        modules["broadcaster"] = std::make_unique<Broadcaster>(getDestinations(input));
-        notifyDestinations(modules["broadcaster"]);
-    }
-    */
 
     std::vector<std::string> getDestinations(const std::string &input)
     {
         std::vector<std::string> ret;
-        std::string dests = input.substr(input.find_last_of(" ") + 1);
+        std::string dests = input.substr(input.find(">") + 1);
         std::stringstream ss(dests);
         std::string d;
         while (std::getline(ss, d, ','))
         {
-            ret.push_back(d);
+            ret.push_back(d.substr(1));
         }
         return ret;
     }
@@ -185,11 +225,30 @@ private:
 
     void notifyDestinations(const std::unique_ptr<Module> &ptr)
     {
-        for (auto &&d : ptr->m_destinations)
+        for (const auto &d : ptr->m_destinations)
         {
-            (modules.count(d)) ? modules[d]->addIncomingConnection(ptr->m_name)
-                               : waiting[d].push_back(ptr->m_name);
+            if (modules.count(d) > 0)
+            {
+                modules[d]->addIncomingConnection(ptr->m_name);
+            }
+            else
+            {
+                if (waiting.count(d) == 0)
+                    waiting[d] = std::vector<std::string>();
+                waiting[d].push_back(ptr->m_name);
+            }
         }
+    }
+
+    void notifyWaiters(const std::unique_ptr<Module> &ptr)
+    {
+        if (waiting.count(ptr->m_name) == 0)
+            return;
+        for (const auto &waiter : waiting[ptr->m_name])
+        {
+            ptr->addIncomingConnection(waiter);
+        }
+        waiting.erase(ptr->m_name);
     }
 };
 
@@ -198,8 +257,19 @@ int main(int argc, char const *argv[])
     std::ifstream inputFile;
     inputFile.open(argv[1]);
     std::string line;
-    int ans;
+    uint64_t ans = 0;
+    ModuleEnvironment modEnv;
+    while (std::getline(inputFile, line))
+    {
+        modEnv.addModule(line);
+    }
     inputFile.close();
-    std::cout << ans;
+
+    for (size_t i = 0; i < 1000; i++)
+    {
+        modEnv.pushButton();
+        modEnv.evaluateSignals();
+    }
+    std::cout << modEnv.getResult();
     return 0;
 }
