@@ -143,17 +143,24 @@ public:
         return highCount * lowCount;
     }
 
+    /*
+    Check if all rx inputs pulsed at least once.
+    */
     bool allCyclesInstanciated()
     {
         return (buttonPresses > 0 && std::all_of(rxInputCycles.begin(), rxInputCycles.end(), [](const auto &p)
                                                  { return p.second > 0; }));
     }
 
+    /*
+    We can calculate the first pulse of the rx module based on the assumption that the connected
+    Conjunction Modules connected to rx pulse in cycles and calculating the lowest common multiple of said cycles.
+    */
     uint64_t calcFirstRXPulse()
     {
         return std::accumulate(rxInputCycles.begin(), rxInputCycles.end(), static_cast<uint64_t>(1),
                                [](uint64_t acc, const auto &val)
-                               { return std::lcm(acc, val.second);});
+                               { return std::lcm(acc, val.second); });
     }
 
 private:
@@ -174,36 +181,26 @@ private:
             s.state ? ++highCount : ++lowCount;
             if (modules.count(s.destination))
             {
-                if (rxInputCycles.count(s.source) && s.state == HIGH && rxInputCycles[s.source] == 0)
-                {
-                    rxInputCycles[s.source] = buttonPresses;
-                }
+                if (rxInputCycles.count(s.source) && s.state == HIGH && rxInputCycles[s.source] == 0) 
+                    rxInputCycles[s.source] = buttonPresses; // adding the button pushes it took for the rxInput to pulse (cycle)
 
-                const auto outSignals = modules[s.destination]->processSignal(s);
-                for (const Signal &out : outSignals)
-                {
-                    signalQueue.push(out);
-                }
+                const auto & out = modules[s.destination]->processSignal(s);
+                std::for_each(out.begin(),out.end(),[&](const Signal & s){signalQueue.push(s);});
             }
         }
     }
 
     void setUprxInputCycles()
     {
-        if (rxInput.empty() || modules.count(rxInput) == 0 || !rxInputCycles.empty())
-            return;
-
-        const auto conPtr = dynamic_cast<Conjunction *>(modules[rxInput].get());
-        for (auto &&input : conPtr->states)
-        {
-            rxInputCycles[input.first] = 0;
-        }
+        const auto conPtr = dynamic_cast<Conjunction *>(modules[rxInput].get()); // not pretty, i know...
+        std::transform(conPtr->states.begin(), conPtr->states.end(), std::inserter(rxInputCycles, rxInputCycles.end()),
+               [](const auto &input) { return std::make_pair(input.first, 0); });
     }
 
     template <typename T, typename std::enable_if<std::is_base_of<Module, T>::value>::type * = nullptr>
     void makeModules(const std::string &input)
     {
-        const auto name = (std::is_same<T, Broadcaster>::value) ? "broadcaster" : getName(input);
+        const auto name = (std::is_same<T, Broadcaster>::value) ? "broadcaster" : getName(input); // meh
         modules[name] = std::make_unique<T>(name, getDestinations(input));
         notifyDestinations(modules[name]);
         notifyWaiters(modules[name]);
@@ -250,7 +247,7 @@ private:
     void notifyWaiters(const std::unique_ptr<Module> &ptr)
     {
         if (waiting.count(ptr->m_name) == 0)
-            return;
+            return;     
         for (const auto &waiter : waiting[ptr->m_name])
         {
             ptr->addIncomingConnection(waiter);
