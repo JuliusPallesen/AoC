@@ -148,8 +148,7 @@ public:
     */
     bool allCyclesInstanciated()
     {
-        return (buttonPresses > 0 && std::all_of(rxInputCycles.begin(), rxInputCycles.end(), [](const auto &p)
-                                                 { return p.second > 0; }));
+        return (buttonPresses > 0 && _inputsInitialized >= _inputsCount);
     }
 
     /*
@@ -169,6 +168,8 @@ private:
     std::string rxInput;
     uint64_t highCount = 0;
     uint64_t lowCount = 0;
+    uint8_t _inputsCount = 0;
+    uint8_t _inputsInitialized = 0;
     std::unordered_map<std::string, std::unique_ptr<Module>> modules;
     std::queue<Signal> signalQueue;
 
@@ -181,11 +182,15 @@ private:
             s.state ? ++highCount : ++lowCount;
             if (modules.count(s.destination))
             {
-                if (rxInputCycles.count(s.source) && s.state == HIGH && rxInputCycles[s.source] == 0) 
+                if (rxInputCycles.count(s.source) && s.state == HIGH && rxInputCycles[s.source] == 0)
+                {
+                    _inputsInitialized++;
                     rxInputCycles[s.source] = buttonPresses; // adding the button pushes it took for the rxInput to pulse (cycle)
+                }
 
-                const auto & out = modules[s.destination]->processSignal(s);
-                std::for_each(out.begin(),out.end(),[&](const Signal & s){signalQueue.push(s);});
+                const auto &out = modules[s.destination]->processSignal(s);
+                std::for_each(out.begin(), out.end(), [&](const Signal &s)
+                              { signalQueue.push(s); });
             }
         }
     }
@@ -194,7 +199,9 @@ private:
     {
         const auto conPtr = dynamic_cast<Conjunction *>(modules[rxInput].get()); // not pretty, i know...
         std::transform(conPtr->states.begin(), conPtr->states.end(), std::inserter(rxInputCycles, rxInputCycles.end()),
-               [](const auto &input) { return std::make_pair(input.first, 0); });
+                       [](const auto &input)
+                       { return std::make_pair(input.first, 0); });
+        _inputsCount = rxInputCycles.size();
     }
 
     template <typename T, typename std::enable_if<std::is_base_of<Module, T>::value>::type * = nullptr>
@@ -247,7 +254,7 @@ private:
     void notifyWaiters(const std::unique_ptr<Module> &ptr)
     {
         if (waiting.count(ptr->m_name) == 0)
-            return;     
+            return;
         for (const auto &waiter : waiting[ptr->m_name])
         {
             ptr->addIncomingConnection(waiter);
