@@ -1,0 +1,9 @@
+r1 = o1 + d1 * v1
+r2 = o2 + d2 * v2
+
+r1 = r2
+o1 + d1 * v1 = o2 + d2 * v2
+
+
+scalar1 = ((o2 - o1).(d1 x d2)) / d1.(d1 x d2)
+
