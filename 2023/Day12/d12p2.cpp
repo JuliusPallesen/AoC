@@ -69,17 +69,15 @@ uint64_t getAllPossibilities(State s,
     std::unordered_map<State, uint64_t, StateHash>& mep,
     bool in = false)
 {
-    if (s.rest_input.empty()) {
+    if (s.rest_input.empty()) 
         return s.rest_puzzle.find('#') == std::string::npos;
-    }
-    if (s.rest_puzzle.empty()) {
+    
+    if (s.rest_puzzle.empty()) 
         return s.rest_input.size() == 1 && s.rest_input[0] == 0;
-    }
-
-    if (mep.count(s) > 0) {
+    
+    if (mep.count(s) > 0) 
         return mep[s];
-    }
-
+    
     const auto curr = s.rest_puzzle[s.rest_puzzle.size() - 1];
     uint64_t ret = 0;
 

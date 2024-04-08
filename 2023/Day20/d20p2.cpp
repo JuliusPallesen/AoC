@@ -5,7 +5,7 @@
 #include <algorithm>
 #include <queue>
 #include <unordered_map>
-#include <memory>
+#include <memory> 
 #include <sstream>
 #include <string>
 #include <type_traits>
@@ -88,12 +88,10 @@ private:
 
     State getState()
     {
-        for (auto &&slot : states)
-        {
-            if (slot.second == LOW)
-                return HIGH;
-        }
-        return LOW;
+        return std::any_of(states.begin(), states.end(), [](const auto slot)
+                           { return slot.second == LOW; })
+                   ? HIGH
+                   : LOW;
     }
 };
 
@@ -216,13 +214,10 @@ private:
     std::vector<std::string> getDestinations(const std::string &input)
     {
         std::vector<std::string> ret;
-        std::string dests = input.substr(input.find(">") + 1);
-        std::stringstream ss(dests);
+        std::stringstream ss(input.substr(input.find(">") + 1));
         std::string d;
         while (std::getline(ss, d, ','))
-        {
-            ret.push_back(d.substr(1));
-        }
+            ret.emplace_back(std::move(d.substr(1)));
         return ret;
     }
 

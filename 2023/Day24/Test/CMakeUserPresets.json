@@ -1,0 +1,10 @@
+{
+    "version": 4,
+    "vendor": {
+        "conan": {}
+    },
+    "include": [
+        "C:\\Users\\julp\\OneDrive - Z\u00fchlke Engineering AG\\Documents\\Learning\\AoC\\2023\\Day24\\Test\\build\\build\\generators\\CMakePresets.json",
+        "C:\\Users\\julp\\OneDrive - Z\u00fchlke Engineering AG\\Documents\\Learning\\AoC\\2023\\Day24\\Test\\build\\build\\Release\\generators\\CMakePresets.json"
+    ]
+}
