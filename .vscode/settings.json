@@ -43,6 +43,7 @@
         "ostream": "cpp",
         "queue": "cpp",
         "random": "cpp",
+        "ranges": "cpp",
         "ratio": "cpp",
         "set": "cpp",
         "sstream": "cpp",
@@ -77,6 +78,7 @@
         "xutility": "cpp",
         "stack": "cpp",
         "numbers": "cpp",
-        "regex": "cpp"
+        "regex": "cpp",
+        "span": "cpp"
     }
 }
