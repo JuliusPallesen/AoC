@@ -79,6 +79,13 @@
         "stack": "cpp",
         "numbers": "cpp",
         "regex": "cpp",
-        "span": "cpp"
+        "span": "cpp",
+        "any": "cpp",
+        "bitset": "cpp",
+        "complex": "cpp",
+        "condition_variable": "cpp",
+        "future": "cpp",
+        "valarray": "cpp",
+        "variant": "cpp"
     }
 }
