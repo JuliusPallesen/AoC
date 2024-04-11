@@ -11,121 +11,88 @@
 #include <unordered_map>
 #include <memory>
 #include <numeric>
+#include <regex>
+#include <stack>
 
-constexpr int MAX_VAL = 100000;
-constexpr int STORAGE_SPACE = 70000000;
-constexpr int UNUSED_SPACE_NEEDED = 30000000;
-
-// Probably switch to variant now
-struct Directory;
-
-struct FSO
+class Day7
 {
-    std::string name;
-    std::shared_ptr<Directory> parent;
-    virtual int getSize() = 0;
-    virtual int getSumLessThanMaxVal() = 0;
-    virtual int getBestToDelete(const int needed) = 0;
-    virtual ~FSO() = default;
-
-protected:
-    FSO(std::string &&n, std::shared_ptr<Directory> &&p) : name(n), parent(p) {}
-};
-
-struct File : public FSO
-{
-    File(std::string &&n, std::shared_ptr<Directory> p, int sz) : FSO(std::move(n), std::move(p)), size(sz) {}
-    int getSize() override { return size; }
-    int getSumLessThanMaxVal() override { return 0; }
-    int getBestToDelete(const int needed) override { return INT_MAX; }
-
 private:
-    int size;
-};
+    const uint32_t MAX_VAL = 100000, STORAGE_SPACE = 70000000, UNUSED_SPACE_NEEDED = 30000000;
 
-struct Directory : public FSO
-{
-    Directory(std::string &&n, std::shared_ptr<Directory> p) : FSO(std::move(n), std::move(p)) {}
-    std::set<std::shared_ptr<FSO>> contents;
-    int getSize() override
+    template <typename... Ts> // https://www.youtube.com/watch?v=eD-ceG-oByA&list=LL&index=2
+    struct overload : Ts...
     {
-        return std::accumulate(contents.begin(), contents.end(), 0, [](int acc, const auto &child)
-                               { return acc + child->getSize(); });
-    }
-    int getSumLessThanMaxVal() override
+        using Ts::operator()...;
+    };
+
+    struct Directory;
+    using Tree = std::variant<std::unique_ptr<Directory>, int>;
+    struct Directory
     {
-        const int childSum = std::accumulate(contents.begin(), contents.end(), 0, [](int acc, const auto &child)
-                                             { return acc + child->getSumLessThanMaxVal(); });
-        const int mySize = getSize();
-        return (mySize > MAX_VAL) ? childSum : childSum + mySize;
-    }
-    int getBestToDelete(const int needed) override
+        std::vector<Tree> contents;
+    };
+
+    std::unique_ptr<Directory> parseInput(std::fstream &input)
     {
-        const int mySize = getSize();
-        const int me = (mySize < needed) ? 0 : mySize;
-        int min = INT_MAX;
-        std::ranges::for_each(contents, [&min,&needed](const auto &c)
-                              {
-            int v = c->getBestToDelete(needed);
-            min = std::min(min, (v > needed) ? v : INT_MAX); });
-        return std::min(me, min);
+        std::string line;
+        std::unique_ptr<Directory> root;
+        std::stack<Directory *> history;
+        const std::regex CD_REGEX("^\\$ cd .*$");
+        const std::regex FILE_REGEX("^\\d+ .*$");
+
+        while (std::getline(input, line))
+        {
+            std::smatch match;
+            if (std::regex_match(line, match, CD_REGEX))
+            {
+                if (match[1] == "..")
+                {
+                    history.pop();
+                }
+                else
+                {
+                    if (!history.empty())
+                    {
+                        history.top()->contents.emplace_back(std::make_unique<Directory>());
+                        history.push(std::get<std::unique_ptr<Directory>>(history.top()->contents.back()).get());
+                    }
+                    else
+                    {
+                        history.push(root.get());
+                    }
+                }
+            }
+            else if (std::regex_match(line, match, FILE_REGEX))
+            {
+                std::cout << match[1];
+                history.top()->contents.push_back(std::stoi(match[1]));
+            }
+        }
+        return root;
     }
+
+public:
+    std::unique_ptr<Directory> m_root;
+    Day7(std::fstream &input) : m_root(std::move(parseInput(input))) {}
+
+    int getSize(Tree &t) const
+    {
+        // remember to return to this once GCC14 or Clang18 are supported for windows 😂 deducing this is still not supported
+        return std::visit(overload{[](this auto &&self, const std::unique_ptr<Directory> &d) -> int
+                                   {
+                                       return std::accumulate(d->contents.begin(), d->contents.end(), 0, [&](const auto &n)
+                                                              { return std::visit(self, n); }); // recursive lambda
+                                   },
+                                   [](const int i) -> int
+                                   { return i; }},
+                          t);
+    };
 };
 
 int main(int argc, char const *argv[])
 {
     std::fstream inputFile(argv[1]);
-    std::string line;
-    std::string dummy;
-    std::string name;
-    std::shared_ptr<Directory> dir;
-    std::shared_ptr<Directory> root = nullptr;
-    int ans = 0;
-    while (std::getline(inputFile, line))
-    {
-        std::cout << line << "\n";
-        std::stringstream ss(line);
-        // SWITCH TO REGEX!!!!
-        if (line[0] == '$')
-        {
-            std::string command;
-            ss >> dummy >> command;
-            if (command == "cd")
-            {
-                ss >> name;
-                if (name != "..")
-                {
-                    const std::shared_ptr<Directory> d_ptr = std::make_shared<Directory>(std::move(name), dir);
-                    if (dir == nullptr)
-                    {
-                        root = d_ptr;
-                    }
-                    else
-                    {
-                        dir->contents.insert(d_ptr);
-                    }
-                    dir = d_ptr;
-                }
-                else
-                {
-                    dir = dir->parent;
-                }
-            }
-        }
-        else
-        {
-            ss >> dummy >> name;
-            if (dummy == "dir")
-            {
-                dir->contents.emplace(std::make_unique<Directory>(std::move(name), dir));
-            }
-            else
-            {
-                int sz = std::stoi(dummy);
-                dir->contents.emplace(std::make_unique<File>(std::move(name), dir, sz));
-            }
-        }
-    }
-    std::cout << root->getBestToDelete(UNUSED_SPACE_NEEDED - (STORAGE_SPACE - root->getSize()));
+    Day7 solver(inputFile);
+
     return EXIT_SUCCESS;
 }
