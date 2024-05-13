@@ -13,12 +13,15 @@ constexpr int TEST_INDEX = sizeof("  Test: divisible by ") - 1;
 constexpr int TRUE_INDEX = sizeof("    If true: throw to monkey ") - 1;
 constexpr int FALSE_INDEX = sizeof("    If false: throw to monkey ") - 1;
 
+// all divisors are prime
+uint64_t common_divisor = 1;
+
 struct Monkey
 {
-    std::vector<int> m_items;
-    std::function<int(int)> m_op_func;
-    std::function<int(int)> m_next_func;
-    int m_touches = 0;
+    std::vector<uint64_t> m_items;
+    std::function<uint64_t(uint64_t)> m_op_func;
+    std::function<uint64_t(uint64_t)> m_next_func;
+    uint64_t m_touches = 0;
 
     Monkey(const std::vector<std::string> &inputlines) : m_items(std::move(parseItems(inputlines[0]))),
                                                          m_op_func(std::move(parseOp(inputlines[1]))),
@@ -32,21 +35,21 @@ struct Monkey
         for (const auto &item : m_items)
         {
             m_touches++;
-            int worry = m_op_func(item);
+            uint64_t worry = m_op_func(item);
             others.at(m_next_func(worry)).m_items.push_back(worry);
         }
         m_items.clear();
     }
 
 private:
-    std::vector<int> parseItems(const std::string &input)
+    std::vector<uint64_t> parseItems(const std::string &input)
     {
         // clang-format off
         return input.substr(ITEMS_INDEX) 
             | std::ranges::views::split(',') 
             | std::ranges::views::transform([](const auto &s)
                 { return std::stoi(std::string(s.begin(), s.end())); }) 
-            | std::ranges::to<std::vector<int>>();
+            | std::ranges::to<std::vector<uint64_t>>();
         // clang-format on
     }
 
@@ -56,16 +59,16 @@ private:
         const auto lstr = opstr.substr(0, opstr.find(' '));
         const auto rstr = opstr.substr(opstr.find_last_of(' ') + 1);
         const auto opchar = opstr.at(opstr.find(' ') + 1);
-        return [=](int a)
+        return [=](uint64_t a)
         {
-            const auto lhs = std::isdigit(lstr[0]) ? std::stoi(lstr) : a;
-            const auto rhs = std::isdigit(rstr[0]) ? std::stoi(rstr) : a;
+            const auto lhs = std::isdigit(lstr[0]) ? std::stoll(lstr) : a;
+            const auto rhs = std::isdigit(rstr[0]) ? std::stoll(rstr) : a;
             switch (opchar)
             {
             case '*':
-                return (lhs * rhs) / 3;
+                return (lhs * rhs) % common_divisor;
             case '+':
-                return (lhs + rhs) / 3;
+                return lhs + rhs;
             default:
                 std::cerr << "not a valid operand\n";
                 exit(1);
@@ -77,7 +80,8 @@ private:
     {
         const int next_true = std::stoi(input[1].substr(TRUE_INDEX));
         const int next_false = std::stoi(input[2].substr(FALSE_INDEX));
-        const int divisor = std::stoi(input[0].substr(TEST_INDEX));
+        const uint64_t divisor = std::stoll(input[0].substr(TEST_INDEX));
+        common_divisor *= divisor;
         return [=](int a)
         { return (a % divisor == 0) ? next_true : next_false; };
     }
@@ -111,10 +115,10 @@ int main(int argc, char const *argv[])
     /* future twoliner
     for(auto && [_,m] : std::views::cartesian_product(std::views::iota(0,20), monkeys)) {
         m.inspect_items(monkeys);
-    }
+    }*/
 
-    */
-    for (auto &&i : std::ranges::views::iota(0, 20))
+    std::cout << common_divisor << "\n";
+    for (auto &&i : std::ranges::views::iota(0, 10000))
     {
         for (auto &&m : monkeys)
         {
