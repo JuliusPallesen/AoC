@@ -2,3 +2,5 @@
 **/build
 **/Eigen/*
 **/*.exe
+session.txt
+!AdventOfInit.exe
