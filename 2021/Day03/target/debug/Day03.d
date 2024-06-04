@@ -1,1 +1,0 @@
-C:\Users\julp\OneDrive\ -\ Zühlke\ Engineering\ AG\Documents\Learning\AoC\2021\Day03\target\debug\Day03.exe: C:\Users\julp\OneDrive\ -\ Zühlke\ Engineering\ AG\Documents\Learning\AoC\2021\Day03\src\main.rs
