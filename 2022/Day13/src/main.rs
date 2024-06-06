@@ -1,7 +1,7 @@
 use itertools::{EitherOrBoth::*, Itertools};
 use std::{cmp::Ordering::*, env, fs::File, io::Read};
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 enum IList {
     List(Vec<IList>),
     Num(u32),
@@ -63,6 +63,12 @@ impl PartialOrd for IList {
     }
 }
 
+impl Ord for IList {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.partial_cmp(other).unwrap_or(Equal)
+    }
+}
+
 fn main() {
     let args: Vec<String> = env::args().collect();
 
@@ -72,7 +78,7 @@ fn main() {
         .expect("Couldn't open file")
         .read_to_string(&mut contents);
 
-    let ilists: Vec<IList> = contents
+    let mut ilists: Vec<IList> = contents
         .lines()
         .filter_map(|line| IList::new(line)) // create ILists and filter out empty
         .collect();
@@ -80,8 +86,20 @@ fn main() {
     let ans1: usize = ilists
         .chunks_exact(2) // group in pairs of 2
         .enumerate()
-        .map(|(i, w)| (w[0] < w[1]) as usize * (i + 1)) // check if ILists are in order, if so: Sum up index (index * 0 or 1 (bool to int))
+        .map(|(i, w)| (w[0] < w[1]) as usize * (i + 1)) // check if ILists are in order, if so: Sum up index (Branchless: index * 0 or 1 (bool cast to int))
         .sum();
 
     println!("part1: {ans1}");
+
+    // part2: insert clones of both dividers, sort the entire list vector and multiple their indices +1
+    let div1 = IList::List(vec![IList::List(vec![IList::Num(2)])]);
+    let div2 = IList::List(vec![IList::List(vec![IList::Num(6)])]);
+    ilists.push(div1.clone());
+    ilists.push(div2.clone());
+    ilists.sort();
+
+    let ans2 =
+        (ilists.binary_search(&div1).unwrap() + 1) * (ilists.binary_search(&div2).unwrap() + 1);
+
+    println!("part1: {ans2}");
 }
