@@ -112,5 +112,6 @@ fn main() -> Result<(), Error> {
 
     part2(&mut ilists);
     println!("[part 2]\ttime elapsed: {:?}", start_time.elapsed());
+    
     Ok(())
 }
