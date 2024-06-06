@@ -1,5 +1,5 @@
 use itertools::{EitherOrBoth::*, Itertools};
-use std::{cmp::Ordering::*, env, fs::File, io::Read};
+use std::{cmp::Ordering::*, env, fs::File, io::{Error, Read}};
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 enum IList {
@@ -40,24 +40,16 @@ impl PartialOrd for IList {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
         match (&self, other) {
             (Self::Num(lhs), IList::Num(rhs)) => lhs.partial_cmp(rhs),
-            (Self::Num(a), other) => Self::List(vec![Self::Num(*a).into()]).partial_cmp(other),
+            (Self::Num(a), other) => Self::List(vec![Self::Num(*a)]).partial_cmp(other),
             (other, Self::Num(a)) => other.partial_cmp(&&Self::List(vec![Self::Num(*a)])),
             (Self::List(lhs), IList::List(rhs)) => {
-                for pair in lhs.iter().zip_longest(rhs.iter()) {
-                    // Compare Lists element by element or check the length
-                    match pair {
-                        Both(a, b) => {
-                            if let Some(ordering) = a.partial_cmp(b) {
-                                if ordering != Equal {
-                                    return Some(ordering);
-                                }
-                            }
-                        }
-                        Left(_) => return Some(Greater),
-                        Right(_) => return Some(Less),
-                    }
-                }
-                None
+                lhs.iter()
+                    .zip_longest(rhs.iter())
+                    .find_map(|pair| match pair {
+                        Both(a, b) => a.partial_cmp(b).filter(|&ord| ord != Equal),
+                        Left(_) => Some(Greater),
+                        Right(_) => Some(Less),
+                    })
             }
         }
     }
@@ -69,14 +61,14 @@ impl Ord for IList {
     }
 }
 
-fn main() {
+fn main() -> Result<(),Error> {
     let args: Vec<String> = env::args().collect();
 
     let mut contents: String = String::new();
 
     let _ = File::open(args.get(1).expect("Please provide a valid file path"))
         .expect("Couldn't open file")
-        .read_to_string(&mut contents);
+        .read_to_string(&mut contents)?;
 
     let mut ilists: Vec<IList> = contents
         .lines()
@@ -102,4 +94,6 @@ fn main() {
         (ilists.binary_search(&div1).unwrap() + 1) * (ilists.binary_search(&div2).unwrap() + 1);
 
     println!("part1: {ans2}");
+
+    Ok(())
 }
