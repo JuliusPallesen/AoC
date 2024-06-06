@@ -1,4 +1,5 @@
 use itertools::{EitherOrBoth::*, Itertools};
+use std::time::Instant;
 use std::{
     cmp::Ordering::*,
     env,
@@ -73,7 +74,7 @@ fn part1(ilists: &Vec<IList>) -> () {
         .map(|(i, w)| (w[0] < w[1]) as usize * (i + 1)) // check if ILists are in order, if so: Sum up index (Branchless: index * 0 or 1 (bool cast to int))
         .sum();
 
-    println!("part1: {ans1}");
+    println!("[part 1]\tanswer: {ans1}");
 }
 
 fn part2(ilists: &mut Vec<IList>) {
@@ -87,12 +88,12 @@ fn part2(ilists: &mut Vec<IList>) {
     let ans2 =
         (ilists.binary_search(&div1).unwrap() + 1) * (ilists.binary_search(&div2).unwrap() + 1);
 
-    println!("part1: {ans2}");
+    println!("[part 2]\tanswer: {ans2}");
 }
 
 fn main() -> Result<(), Error> {
+    let start_time = Instant::now();
     let args: Vec<String> = env::args().collect();
-
     let mut contents: String = String::new();
 
     let _ = File::open(args.get(1).expect("Please provide a valid file path"))
@@ -104,8 +105,12 @@ fn main() -> Result<(), Error> {
         .filter_map(|line| IList::new(line)) // create ILists and filter out empty
         .collect();
 
-    part1(&ilists);
-    part2(&mut ilists);
+    println!("[parsing lists]\ttime elapsed: {:?}", start_time.elapsed());
 
+    part1(&ilists);
+    println!("[part 1]\ttime elapsed: {:?}", start_time.elapsed());
+
+    part2(&mut ilists);
+    println!("[part 2]\ttime elapsed: {:?}", start_time.elapsed());
     Ok(())
 }
