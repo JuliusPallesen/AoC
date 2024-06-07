@@ -1,6 +1,6 @@
 use itertools::{EitherOrBoth::*, Itertools};
 use std::{
-    cmp::Ordering::*,
+    cmp::Ordering,
     env,
     fs::File,
     io::{Error, Read},
@@ -69,7 +69,7 @@ impl PartialOrd for IList {
     /*
     Implements comparisons between ILists used to put them in order
      */
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         match (&self, other) {
             (Self::Num(lhs), IList::Num(rhs)) => lhs.partial_cmp(rhs),
             (Self::Num(a), other) => Self::List(vec![Self::Num(*a)]).partial_cmp(other),
@@ -78,9 +78,9 @@ impl PartialOrd for IList {
                 lhs.iter()
                     .zip_longest(rhs.iter())
                     .find_map(|pair| match pair {
-                        Both(a, b) => a.partial_cmp(b).filter(|&ord| ord != Equal),
-                        Left(_) => Some(Greater),
-                        Right(_) => Some(Less),
+                        Both(a, b) => a.partial_cmp(b).filter(|&ord| ord != Ordering::Equal),
+                        Left(_) => Some(Ordering::Greater),
+                        Right(_) => Some(Ordering::Less),
                     })
             }
         }
@@ -91,8 +91,8 @@ impl Ord for IList {
     /*
     Total Ord using PartialOrd
     */
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        self.partial_cmp(other).unwrap_or(Equal)
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.partial_cmp(other).unwrap_or(Ordering::Equal)
     }
 }
 
