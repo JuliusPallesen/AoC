@@ -27,7 +27,7 @@ impl BingoCard {
         }
     }
 
-    fn find_value(&self, number: i32) -> Option<Point> {
+    fn find(&self, number: i32) -> Option<Point> {
         for (y, row) in self.numbers.iter().enumerate() {
             for (x, val) in row.iter().enumerate() {
                 if *val == Some(number) {
@@ -38,7 +38,7 @@ impl BingoCard {
         None
     }
 
-    fn row_is_done(&self, y: usize) -> bool {
+    fn row_done(&self, y: usize) -> bool {
         self.numbers
             .get(y)
             .expect("Row index out of bounds")
@@ -48,7 +48,7 @@ impl BingoCard {
             == 0
     }
 
-    fn col_is_done(&self, x: usize) -> bool {
+    fn column_done(&self, x: usize) -> bool {
         self.numbers
             .iter()
             .filter(|line| line.get(x).unwrap().is_some())
@@ -58,21 +58,21 @@ impl BingoCard {
 
     fn is_done(&mut self, pos: Point) -> bool {
         let (y, x) = pos;
-        self.done = self.col_is_done(x) || self.row_is_done(y);
+        self.done = self.column_done(x) || self.row_done(y);
         self.done
     }
 
-    fn accept_value(&mut self, number: i32) -> Option<i32> {
-        self.find_value(number).and_then(|(y, x)| {
+    fn accept(&mut self, number: i32) -> Option<i32> {
+        self.find(number).and_then(|(y, x)| {
             self.numbers[y][x] = None;
             match self.is_done((y, x)) {
-                true => Some(self.calculate_score()),
+                true => Some(self.get_score()),
                 false => None,
             }
         })
     }
 
-    fn calculate_score(&self) -> i32 {
+    fn get_score(&self) -> i32 {
         self.numbers.iter().fold(0, |acc, row| {
             acc + row.iter().fold(0, |acc, num| acc + num.unwrap_or(0))
         })
@@ -129,27 +129,20 @@ fn parse_file() -> Vec<String> {
         .collect::<Vec<String>>()
 }
 
-fn draw_number(bingo_cards: &mut Vec<BingoCard>, i: i32) {
-    bingo_cards.iter_mut().for_each(|card| {
-        card.accept_value(i);
-    });
-}
 fn main() -> Result<(), Error> {
     let lines = parse_file();
     let nums = parse_numbers(&lines[..1]);
     let mut bingo_cards = parse_bingo_cards(&lines[2..]);
 
     let mut part2 = 0;
-    let mut i: usize = 0;
-    while !bingo_cards.is_empty() && i < nums.len() {
-        draw_number(&mut bingo_cards, nums[i]);
-        bingo_cards.retain(|card| {
-            if card.done {
-                part2 = nums[i] * card.calculate_score();
-            }
-            !card.done
-        });
-        i += 1;
+    for num in nums {
+        bingo_cards
+            .iter_mut()
+            .filter_map(|card| card.accept(num))
+            .into_iter()
+            .for_each(|score| part2 = score * num);
+
+        bingo_cards.retain(|card| !card.done);
     }
 
     println!("part 2: {:?}", part2);
