@@ -28,32 +28,19 @@ impl BingoCard {
     }
 
     fn find(&self, number: i32) -> Option<Point> {
-        for (y, row) in self.numbers.iter().enumerate() {
-            for (x, val) in row.iter().enumerate() {
-                if *val == Some(number) {
-                    return Some((y, x));
-                }
-            }
-        }
-        None
+        self.numbers.iter().enumerate().find_map(|(y, row)| {
+            row.iter()
+                .enumerate()
+                .find_map(|(x, &val)| (val == Some(number)).then_some((y, x)))
+        })
     }
 
     fn row_done(&self, y: usize) -> bool {
-        self.numbers
-            .get(y)
-            .expect("Row index out of bounds")
-            .iter()
-            .filter(|x| x.is_some())
-            .count()
-            == 0
+        self.numbers[y].iter().all(Option::is_none)
     }
 
     fn column_done(&self, x: usize) -> bool {
-        self.numbers
-            .iter()
-            .filter(|line| line.get(x).unwrap().is_some())
-            .count()
-            == 0
+        self.numbers.iter().all(|&row| row[x].is_none())
     }
 
     fn is_done(&mut self, pos: Point) -> bool {
@@ -65,50 +52,39 @@ impl BingoCard {
     fn accept(&mut self, number: i32) -> Option<i32> {
         self.find(number).and_then(|(y, x)| {
             self.numbers[y][x] = None;
-            match self.is_done((y, x)) {
-                true => Some(self.get_score()),
-                false => None,
-            }
+            self.is_done((y, x)).then_some(self.get_score())
         })
     }
 
     fn get_score(&self) -> i32 {
-        self.numbers.iter().fold(0, |acc, row| {
-            acc + row.iter().fold(0, |acc, num| acc + num.unwrap_or(0))
-        })
+        self.numbers.iter().flatten().filter_map(|&id| id).sum()
     }
 }
 
+fn parse_int(s: &str) -> i32 {
+    s.trim().parse().unwrap()
+}
+
 fn parse_numbers(input: &[String]) -> Vec<i32> {
-    input
-        .iter()
-        .nth(0)
-        .unwrap()
-        .split(',')
-        .map(|s| s.trim().parse::<i32>().unwrap())
-        .collect::<Vec<i32>>()
+    input[0].split(',').map(parse_int).collect()
 }
 
 fn parse_bingo_cards(input: &[String]) -> Vec<BingoCard> {
     input
-        .split(|s| s.is_empty())
-        .map(|card| {
-            let numbers = get_numbers(card);
-            BingoCard::new(numbers)
-        })
-        .collect::<Vec<BingoCard>>()
+        .split(String::is_empty)
+        .map(get_numbers)
+        .map(BingoCard::new)
+        .collect()
 }
 
 fn get_numbers(card: &[String]) -> OptVec2D {
-    card.iter()
-        .map(|line| parse_ints(line))
-        .collect::<OptVec2D>()
+    card.iter().map(parse_ints).collect()
 }
 
 fn parse_ints(line: &String) -> OptVec {
     line.split_whitespace()
         .map(|s| Some(s.trim().parse::<i32>().unwrap()))
-        .collect::<OptVec>()
+        .collect()
 }
 
 fn parse_file() -> Vec<String> {
@@ -125,14 +101,14 @@ fn parse_file() -> Vec<String> {
 
     contents
         .lines()
-        .map(|line| line.to_string())
+        .map(str::to_string)
         .collect::<Vec<String>>()
 }
 
 fn main() -> Result<(), Error> {
     let lines = parse_file();
     let nums = parse_numbers(&lines[..1]);
-    let mut bingo_cards = parse_bingo_cards(&lines[2..]);
+    let mut bingo_cards: Vec<BingoCard> = parse_bingo_cards(&lines[2..]);
 
     let mut part2 = 0;
     for num in nums {
