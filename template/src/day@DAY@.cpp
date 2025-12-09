@@ -4,7 +4,7 @@ int main(int argc, char const *argv[])
 {
     try
     {
-        const std::string input_path{argc <= 1 ? "../../input.txt" : argv[1]};
+        const std::string input_path{argc <= 1 ? "../input.txt" : argv[1]};
         const auto input = aoc::parseFileAsStringVector(input_path);
         aoc::printVector(input);
     }
