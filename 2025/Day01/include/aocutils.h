@@ -23,7 +23,7 @@ namespace aoc
     /*
     Commonn string parsing Tasks
     */
-    const std::vector<std::string> DIGIT_STRINGS = {"zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine"};
+    const std::array<const char *, 10> DIGIT_STRINGS = {"zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine"};
 
     std::vector<std::string> splitString(const std::string &input_str, const char split_char = ' ', bool allow_empty = false)
     {
@@ -127,7 +127,7 @@ namespace aoc
         std::ifstream input_file(file_path);
         checkFileValidity(input_file);
         std::string content((std::istreambuf_iterator<char>(input_file)), std::istreambuf_iterator<char>());
-        return splitString(content, '\n', true);
+        return splitString(content, "\n\r", false);
     }
 
     std::vector<int> parseFileAsIntVector(const std::string &file_path)
@@ -280,7 +280,7 @@ namespace aoc
     Printing multi dimensional Datastructures
     */
     template <typename T>
-    void printVector(const std::vector<T> &v, const char item_break = ' ')
+    void printVector(const std::vector<T> &v, const char item_break = ',')
     {
         std::ranges::for_each(v, [&](const auto &i)
                               { std::cout << i << item_break; });
@@ -293,6 +293,7 @@ namespace aoc
                               {
                 printVector(v,' ');
                 std::cout << "\n"; });
+        std::cout << std::flush;
     }
 
     /*
