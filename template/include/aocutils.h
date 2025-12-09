@@ -16,6 +16,7 @@
 #include <ranges>
 #include <concepts>
 #include <queue>
+#include <climits>
 
 namespace aoc
 {
