@@ -22,7 +22,7 @@ template <UnsignedInteger T>
 {
     auto iter = std::views::iota(0) | std::views::take_while([&](auto)
                                                              { return (num /= base) > 0; });
-    return 1 + std::ranges::distance(iter);
+    return T{1} + static_cast<T>(std::ranges::distance(iter));
 }
 
 template <UnsignedInteger T>
@@ -42,7 +42,7 @@ public:
         const auto parse_int = [](const std::string_view &s)
         {
             return std::ranges::fold_left(s, T{0}, [](auto acc, char c)
-                                          { return acc * T{10} + (c - '0'); });
+                                          { return acc * T{10} + static_cast<T>(c - '0'); });
         };
         const auto separator = range.find('-');
         from = parse_int(range.substr(0, separator));
