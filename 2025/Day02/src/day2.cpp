@@ -22,11 +22,11 @@ template <std::integral T>
 }
 
 template <std::integral T>
-[[nodiscard]] constexpr auto to_digits(T n, T base = T{10}) noexcept
+[[nodiscard]] constexpr auto to_digits(T num, T base = T{10}) noexcept
 {
-    const auto digits = digit_count(n, base);
+    const auto digits = digit_count(num, base);
     return std::views::iota(T{0}, digits) | std::views::transform([=](auto exp)
-                                                                  { return (n / ipow(base, exp)) % base; });
+                                                                  { return (num / ipow(base, exp)) % base; });
 }
 
 template <std::integral T>
@@ -70,8 +70,6 @@ private:
     {
         const auto middle = digit_count(num) / 2;
         const auto digits = to_digits(num);
-        if (digits % 2 == 0)
-            return has_equal_chunks(digits, 1);
 
         return std::ranges::any_of(std::views::iota(T{1}, middle + 1), [num, &digits](const auto i)
                                    { return has_equal_chunks(digits, i); });
@@ -90,24 +88,24 @@ private:
 };
 
 template <std::integral T, typename F>
-[[nodiscard]] constexpr auto solve_part(auto ranges, F f) noexcept -> T
+[[nodiscard]] constexpr auto solve_part(std::string_view input, F f) noexcept -> T
 {
-    auto sums = ranges | std::views::transform([&](auto str)
-                                               { return f(IdRange<T>{std::string_view{str.begin(), str.end()}}); });
+    auto sums = std::views::split(input, ',') | std::views::transform([&](auto str)
+                                                                      { return f(IdRange<T>{std::string_view{str.begin(), str.end()}}); });
     return std::ranges::fold_left(sums, T{0}, std::plus{});
 }
 
 template <std::integral T>
 [[nodiscard]] constexpr auto part1(std::string_view input) noexcept -> T
 {
-    return solve_part<T>(std::views::split(input, ','), [](const auto &r)
+    return solve_part<T>(input, [](const auto &r)
                          { return r.part1_sum(); });
 }
 
 template <std::integral T>
 [[nodiscard]] constexpr auto part2(std::string_view input) noexcept -> T
 {
-    return solve_part<T>(std::views::split(input, ','), [](const auto &r)
+    return solve_part<T>(input, [](const auto &r)
                          { return r.part2_sum(); });
 }
 
@@ -133,6 +131,7 @@ int main(int argc, char const *argv[])
     catch (const std::exception &e)
     {
         std::cerr << std::format("{}\n", e.what());
+        return EXIT_FAILURE;
     }
 
     return EXIT_SUCCESS;
