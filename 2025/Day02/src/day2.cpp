@@ -6,14 +6,18 @@
 #include <algorithm>
 #include <iostream>
 #include <ranges>
+#include "../include/aocutils.h"
 
-template <std::integral T>
+template <typename T>
+concept UnsignedInteger = std::is_integral_v<T> && std::is_unsigned_v<T>;
+
+template <UnsignedInteger T>
 [[nodiscard]] constexpr auto ipow(T num, T exp) noexcept -> T
 {
     return std::ranges::fold_left(std::views::repeat(num, exp), T{1}, std::multiplies{});
 }
 
-template <std::integral T>
+template <UnsignedInteger T>
 [[nodiscard]] constexpr auto digit_count(T num, T base = T{10}) noexcept -> T
 {
     auto iter = std::views::iota(0) | std::views::take_while([&](auto)
@@ -21,21 +25,21 @@ template <std::integral T>
     return 1 + std::ranges::distance(iter);
 }
 
-template <std::integral T>
+template <UnsignedInteger T>
 [[nodiscard]] constexpr auto to_digits(T num, T base = T{10}) noexcept
 {
-    const auto digits = digit_count(num, base);
-    return std::views::iota(T{0}, digits) | std::views::transform([=](auto exp)
-                                                                  { return (num / ipow(base, exp)) % base; });
+    const auto count = digit_count(num, base);
+    return std::views::iota(T{0}, count) | std::views::transform([num, base](auto exp)
+                                                                 { return (num / ipow(base, exp)) % base; });
 }
 
-template <std::integral T>
+template <UnsignedInteger T>
 class IdRange
 {
 public:
-    constexpr IdRange(std::string_view range) noexcept
+    constexpr IdRange(const std::string_view &range) noexcept
     {
-        const auto parse_int = [](std::string_view s)
+        const auto parse_int = [](const std::string_view &s)
         {
             return std::ranges::fold_left(s, T{0}, [](auto acc, char c)
                                           { return acc * T{10} + (c - '0'); });
@@ -68,18 +72,22 @@ private:
 
     [[nodiscard]] constexpr static auto valid_part2(T num) noexcept -> bool
     {
-        const auto middle = digit_count(num) / 2;
         const auto digits = to_digits(num);
+        const auto count = static_cast<std::size_t>(std::ranges::distance(digits));
+        const auto middle = count / 2;
 
-        return std::ranges::any_of(std::views::iota(T{1}, middle + 1), [num, &digits](const auto i)
+        auto chunks = std::views::iota(std::size_t{1}, middle + 1);
+        return std::ranges::any_of(chunks, [&digits](const auto i)
                                    { return has_equal_chunks(digits, i); });
     }
 
-    [[nodiscard]] constexpr static auto has_equal_chunks(const auto num, T window_size) noexcept -> bool
+    [[nodiscard]] constexpr static auto has_equal_chunks(const auto &digits, std::size_t chunk_size) noexcept -> bool
     {
-        auto chunks = num | std::views::chunk(window_size);
-        const auto first_chunk = *chunks.begin();
-        return std::ranges::all_of(chunks, [first_chunk](auto chunk)
+        if (std::ranges::distance(digits) % chunk_size != 0)
+            return false;
+
+        auto chunks = digits | std::views::chunk(chunk_size);
+        return std::ranges::all_of(chunks, [first_chunk = *chunks.begin()](const auto &chunk)
                                    { return std::ranges::equal(chunk, first_chunk); });
     }
 
@@ -87,23 +95,23 @@ private:
     T to;
 };
 
-template <std::integral T, typename F>
-[[nodiscard]] constexpr auto solve_part(std::string_view input, F f) noexcept -> T
+template <UnsignedInteger T, std::invocable<IdRange<T>> F>
+[[nodiscard]] constexpr auto solve_part(const std::string_view &input, F f) noexcept -> T
 {
     auto sums = std::views::split(input, ',') | std::views::transform([&](auto str)
                                                                       { return f(IdRange<T>{std::string_view{str.begin(), str.end()}}); });
     return std::ranges::fold_left(sums, T{0}, std::plus{});
 }
 
-template <std::integral T>
-[[nodiscard]] constexpr auto part1(std::string_view input) noexcept -> T
+template <UnsignedInteger T>
+[[nodiscard]] constexpr auto part1(const std::string_view &input) noexcept -> T
 {
     return solve_part<T>(input, [](const auto &r)
                          { return r.part1_sum(); });
 }
 
-template <std::integral T>
-[[nodiscard]] constexpr auto part2(std::string_view input) noexcept -> T
+template <UnsignedInteger T>
+[[nodiscard]] constexpr auto part2(const std::string_view &input) noexcept -> T
 {
     return solve_part<T>(input, [](const auto &r)
                          { return r.part2_sum(); });
@@ -124,6 +132,7 @@ auto solve(int argc, char const *argv[]) -> void
 
 int main(int argc, char const *argv[])
 {
+    const aoc::Timer t{};
     try
     {
         solve(argc, argv);
