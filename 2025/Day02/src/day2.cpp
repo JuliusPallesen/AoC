@@ -76,16 +76,14 @@ private:
         const auto count = static_cast<std::size_t>(std::ranges::distance(digits));
         const auto middle = count / 2;
 
-        auto chunks = std::views::iota(std::size_t{1}, middle + 1);
+        auto chunks = std::views::iota(std::size_t{1}, middle + 1) | std::views::filter([&count](const auto chunk_size)
+                                                                                        { return count % chunk_size == 0; });
         return std::ranges::any_of(chunks, [&digits](const auto i)
                                    { return has_equal_chunks(digits, i); });
     }
 
     [[nodiscard]] constexpr static auto has_equal_chunks(const auto &digits, std::size_t chunk_size) noexcept -> bool
     {
-        if (std::ranges::distance(digits) % chunk_size != 0)
-            return false;
-
         auto chunks = digits | std::views::chunk(chunk_size);
         return std::ranges::all_of(chunks, [first_chunk = *chunks.begin()](const auto &chunk)
                                    { return std::ranges::equal(chunk, first_chunk); });
